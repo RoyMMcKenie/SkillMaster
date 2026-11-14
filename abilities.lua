@@ -1,11 +1,13 @@
 --[[==========================================================================
   FILE        : skillmaster/abilities.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  Version number only; no code change.
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Tracking is pressed whenever it is ready and no
+                       longer waits for or closes the Tracking window.
+                1.0.1  Version number only; no code change.
                 1.0.0  First release. Brings together the ability handling of
                        Skills2 (Sneak and Hide pressed twice, Feign Death then
-                       stand, Tracking then close the window, mercenary as a
+                       stand, Tracking, mercenary as a
                        combat target, Bash only with a shield) and adds
                        MQ2AutoForage, MQ2Nav walking to the target, and
                        equipment checks.
@@ -29,8 +31,9 @@
             ability   press once
             toggle    press, wait 1 second, press again (Skills2 behaviour)
             feign     press, wait, /stand (Skills2 behaviour)
-            tracking  press, then close the Tracking window with
-                      Window('TrackingWnd').DoClose()
+            tracking  press whenever ready; each press refreshes the list
+                      and can raise the skill. The Tracking window is left
+                      as it is, open or closed.
             forage    /startforage once when MQ2AutoForage is loaded and the
                       option is on, else press and put the item in bags
             combat    target, walk into range with MQ2Nav, /face, press
@@ -288,16 +291,17 @@ function abilities.train(entry)
         utils.delay(1500, function() return mq.TLO.Me.Feigning() == true end)  -- wait until the game shows us feigned
         utils.cmd('/stand')                                         -- get up again
     elseif entry.method == 'tracking' then
-        press(name)
-        utils.delay(1000, function() return mq.TLO.Window('TrackingWnd').Open() == true end)
-        if mq.TLO.Window('TrackingWnd').Open() then mq.TLO.Window('TrackingWnd').DoClose() end  -- close the list
+        -- Each press refreshes the tracking list and is a chance to raise
+        -- Tracking. Whether the Tracking window is open or closed does not
+        -- matter, so the window is never waited for or touched.
+        press(name)  -- /doability Tracking
     elseif entry.method == 'combat' then
         local id = abilities.combatTarget()                         -- checked in requirement already
         if not abilities.approach(id, true) then
             abilities.waiting[entry.key] = 'cannot reach target'
             return false
         end
-        press(name)  -- open the tracking list
+        press(name)  -- the combat ability
     else
         press(name)                                                 -- plain ability
         if entry.key == 'fishing' then

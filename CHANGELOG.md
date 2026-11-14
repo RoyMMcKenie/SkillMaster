@@ -6,6 +6,11 @@
 -->
 # SkillMaster changelog
 
+## 1.0.2 (2026-11-14)
+
+- Tracking: when your character can train it, ticking Tracking presses it every time it is ready. Each press refreshes tracking and can raise the skill. The Tracking window is no longer waited for or closed; open or closed does not matter.
+- Smoke test: Tracking with the window open and with it closed.
+
 ## 1.0.1 (2026-11-14)
 
 Fixes the Begging spam "How can you beg from someone when they can't see you?".

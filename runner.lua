@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/runner.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  The run stops with the trip's reason when a failed
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Version number only; no code change.
+                1.0.1  The run stops with the trip's reason when a failed
                        trip is all that is left. Hide, Sneak and Feign Death are no longer trained at
                        the Begging spot (they made the NPC unable to see
                        you).

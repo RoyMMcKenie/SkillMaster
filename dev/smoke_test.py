@@ -2,8 +2,9 @@
 =============================================================================
   FILE        : skillmaster/dev/smoke_test.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  Begging scenarios added (hidden, sneaking, unseen spam).
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Tracking scenarios (window open and closed).
+                1.0.1  Begging scenarios added (hidden, sneaking, unseen spam).
                 1.0.0  First version, built the same way as the ClericFood
                        smoke test.
 
@@ -40,6 +41,10 @@
                        ticked: Sneak is turned off and /makemevisible sent
                        before any beg, no "can't see you" reply, Hide and
                        Sneak are trained only after the trip
+            tracking_open / tracking_closed
+                       Tracking 4/20 pressed whenever ready to cap, with
+                       the Tracking window open and closed; the window is
+                       never closed or changed
             begstuck   /makemevisible does nothing: no beg is sent and the
                        run stops with the trip's reason
 
@@ -129,6 +134,11 @@ if SCENARIO == 'beg' or SCENARIO == 'begstuck' then        -- warrior at the beg
   G.zone, G.invis, G.sneak = 'freeportwest', true, true   -- starts hidden and sneaking
   skill('Begging', 0, 20); skill('Hide', 0, 5); skill('Sneak', 0, 5)
 end
+if SCENARIO == 'tracking_open' or SCENARIO == 'tracking_closed' then   -- ranger
+  G.cls, G.maxMana, G.mana = 'RNG', 0, 0
+  G.trackWnd = SCENARIO == 'tracking_open'                -- window state must not matter
+  skill('Tracking', 4, 20)
+end
 if SCENARIO == 'monk' then
   G.cls, G.maxMana, G.mana = 'MNK', 0, 0
   skill('Mend', 3, 10); skill('Sneak', 0, 8); skill('Feign Death', 0, 6); skill('Kick', 2, 12)
@@ -174,7 +184,10 @@ TLO.Cursor = { ID = function() return G.cursor and 1 or nil end,
                Name = function() return G.cursor end, NoRent = function() return G.cursor ~= nil end }
 TLO.FindItemCount = function() return val(0) end
 TLO.GameTime = { Night = val(false) }
-TLO.Window = function() return { Open = val(false), DoClose = function() end } end
+TLO.Window = function(w)                                    -- records any window touch
+  return { Open = function() return w == 'TrackingWnd' and G.trackWnd == true end,
+           DoClose = function() G.closed = (G.closed or 0) + 1 end }
+end
 TLO.MacroQuest = { GameState = val('INGAME') }
 TLO.EverQuest = { Server = val('test') }
 TLO.Zone = { ShortName = function() return G.zone or 'poknowledge' end }
@@ -232,6 +245,7 @@ function mq.cmd(c)
     if ab == 'Begging' then G.begs = (G.begs or 0) + 1 end
     if ab == 'Sneak' then G.sneak = not G.sneak end          -- toggle
     if ab == 'Hide' then G.invis = true end                   -- hidden counts as invis
+    if ab == 'Tracking' then G.tracks = (G.tracks or 0) + 1 end
     raise(ab)
     if ab == 'Feign Death' then G.feign = true end
   end
@@ -296,6 +310,8 @@ local sel = {
   guard    = { 'divination' },
   beg      = { 'begging', 'hide', 'sneak' },
   begstuck = { 'begging' },
+  tracking_open   = { 'tracking' },
+  tracking_closed = { 'tracking' },
   monk     = { 'mend', 'sneak', 'feign', 'kick' },
 }
 for _, k in ipairs(sel[SCENARIO]) do config.setSelected(k, true) end
@@ -344,6 +360,7 @@ return {
     return false
   end)(),
   tripStatus = travel_status,
+  track = G.skills['Tracking'].cur, tracks = G.tracks or 0, closed = G.closed or 0, trackWnd = G.trackWnd,
 }
 '''
 
@@ -380,6 +397,12 @@ def check(scenario, o):
         if o['begs'] != 0 or o['unseen'] != 0: bad.append('begged while still invisible')
         if o['still']: bad.append('run kept going after the trip failed')
         if 'cannot see you' not in o['tripStatus']: bad.append('trip did not stop with a reason: %r' % o['tripStatus'])
+    elif scenario in ('tracking_open', 'tracking_closed'):
+        if o['track'] != 20: bad.append('Tracking not at cap (%s)' % o['track'])
+        if o['tracks'] != 16: bad.append('expected 16 presses for 4 to 20, got %s' % o['tracks'])
+        if o['closed'] != 0: bad.append('Tracking window was closed')
+        if o['trackWnd'] != (scenario == 'tracking_open'): bad.append('window state changed')
+        if o['still']: bad.append('run did not finish')
     elif scenario == 'conflict':
         if o['casts'] != 0: bad.append('cast despite mutually exclusive specializations')
     elif scenario == 'guard':
@@ -424,7 +447,8 @@ def main():
     HOW   : run() for each name, even after a failure.
     WHEN  : From the command line.
     """
-    names = ('cleric', 'pause', 'conflict', 'guard', 'monk', 'beg', 'begstuck')                # every scenario
+    names = ('cleric', 'pause', 'conflict', 'guard', 'monk', 'beg', 'begstuck',
+             'tracking_open', 'tracking_closed')                # every scenario
     only = os.getenv('SKM_ONLY')                                   # optional single scenario
     results = [run(s) for s in names if not only or s == only]
     print('ALL PASS' if all(results) else 'SOME FAILED')

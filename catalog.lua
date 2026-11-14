@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/catalog.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  Version number only; no code change.
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Tracking note: pressed whenever ready, window state
+                       does not matter.
+                1.0.1  Version number only; no code change.
                 1.0.0  First release. Merges the skill lists of Skills2 0.4.2
                        and skillup.lua 1.1 into one data table, adds Eagle
                        Strike, Dragon Punch, Intimidation, Bind Wound,
@@ -45,7 +47,7 @@
         'toggle'    press twice with a pause (Sneak, Hide) so you end up
                     in the state you started in, as Skills2 did
         'feign'     /doability "Feign Death" then /stand, as Skills2 did
-        'tracking'  /doability Tracking then close the Tracking window
+        'tracking'  /doability Tracking whenever ready; window left as is
         'forage'    MQ2AutoForage when loaded, else /doability Forage
         'combat'    /doability on a valid NPC target in melee range
         'travel'    a scripted trip in travel.lua (Begging, Safe Fall)
@@ -140,7 +142,7 @@ catalog.SKILLS = {
       notes = 'Feigns then stands. Avoid while anything is aggro on you.' },
     -- 'tracking': in game skill 'Tracking', trained by method 'tracking'.
     { key = 'tracking',    name = 'Tracking',    group = 'utility', method = 'tracking',
-      notes = 'Opens tracking and closes the Tracking window again.' },
+      notes = 'Pressed whenever ready. Each press refreshes tracking and can raise the skill; the Tracking window can be open or closed.' },
     -- 'sensetraps': in game skill 'Sense Traps', trained by method 'ability'.
     { key = 'sensetraps',  name = 'Sense Traps', group = 'utility', method = 'ability',
       notes = 'Searches for traps nearby.' },

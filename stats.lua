@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/stats.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  Version number only; no code change.
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Version number only; no code change.
+                1.0.1  Version number only; no code change.
                 1.0.0  First release. Keeps the skill up message event of
                        skillup.lua and adds a session log, gains per skill,
                        points per hour, cast and fizzle counts.

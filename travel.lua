@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/travel.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  Before each beg, Sneak is turned off (Me.Sneaking,
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Version number only; no code change.
+                1.0.1  Before each beg, Sneak is turned off (Me.Sneaking,
                        one /doability "Sneak") and Hide / invisibility is
                        dropped with /makemevisible. Begging handles "How can you beg from someone when
                        they can't see you?": a chat event and Me.Invis

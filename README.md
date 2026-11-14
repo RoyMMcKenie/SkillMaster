@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/README.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.1
+  VERSION : 1.0.2
   WHAT    : What SkillMaster does, how to install it, how to use the window
             and commands, and what has not been verified in game yet.
   WHY     : First thing to read before running or editing the package.
@@ -9,7 +9,7 @@
             covers versions.
   WHEN    : Read before first use; update when behaviour or commands change.
 -->
-# SkillMaster 1.0.1
+# SkillMaster 1.0.2
 
 SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window. It merges the two earlier scripts, Skills2 0.4.2 (Blasty) and skillup.lua 1.1, into one modular, fully documented package.
 
@@ -28,6 +28,10 @@ Optional plugins, used automatically when loaded (the Options tab shows which ar
 | MQ2EasyFind | `/travelto` zone trips for Begging and Safe Fall | trips are skipped with a warning |
 | MQ2AutoForage | `/startforage` and `/stopforage` | Forage pressed with `/doability` |
 | RGMercs (Lua) | `/rgl pause` at Start, `/rgl unpause` at Stop | nothing to pause |
+
+## Tracking
+
+If your character can train Tracking (it has a Tracking cap above zero), it appears in the Train tab under Utility and "Tick all available" includes it. While ticked, SkillMaster presses Tracking every time it is ready. Each press refreshes tracking and is a chance to raise the skill. The Tracking window can be open or closed; SkillMaster never waits for it or closes it.
 
 ## Window
 
@@ -88,7 +92,7 @@ These came from the original scripts or from documentation and need a live check
 
 ```
 pip install lupa
-python dev/smoke_test.py     # fake MacroQuest, seven scenarios, every tab drawn
+python dev/smoke_test.py     # fake MacroQuest, nine scenarios, every tab drawn
 python dev/doc_audit.py      # documentation standard
 ```
 

@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/ARCHITECTURE.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.1
+  VERSION : 1.0.2
   WHAT    : How the package is built: module map, data flow, the run loop,
             the documentation standard, settings, and every game / plugin
             command it sends with where it was checked.
@@ -108,7 +108,7 @@ TLO members and ImGui calls were checked against [mq-definitions](https://github
 
 ## Testing
 
-- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
+- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
 - `dev/doc_audit.py`: documentation standard.
 
 <!--

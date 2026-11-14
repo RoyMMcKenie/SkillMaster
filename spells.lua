@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/spells.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.1
-  CHANGES     : 1.0.1  Version number only; no code change.
+  VERSION     : 1.0.2
+  CHANGES     : 1.0.2  Version number only; no code change.
+                1.0.1  Version number only; no code change.
                 1.0.0  First release. Combines the INI driven class spells of
                        Skills2 and the per class tables of skillup.lua, and
                        adds: spell book scan, automatic safe spell choice,
