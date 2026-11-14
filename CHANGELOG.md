@@ -6,6 +6,13 @@
 -->
 # SkillMaster changelog
 
+## 1.0.3 (2026-11-14)
+
+- Begging no longer runs you across the zone when you are already at Diggs. Within Begging range (new Options setting, default 15) there is no movement at all. Further away, you walk straight to Diggs with `/nav id`; the fixed Skills2 spot is only a fallback when Diggs is not found. If Diggs wanders out of range during the trip, you walk back to Diggs.
+- When Begging reaches its cap the trip now really finishes its return leg; the Return zone setting defaults to blank, so you stay where you are. Type a zone short name (for example poknowledge) in Options to travel there afterwards.
+- Stopping a run only sends /nav stop, /travelto stop or the forward key release when that movement is actually in progress.
+- Smoke test: beside Diggs and far from Diggs.
+
 ## 1.0.2 (2026-11-14)
 
 - Tracking: when your character can train it, ticking Tracking presses it every time it is ready. Each press refreshes tracking and can raise the skill. The Tracking window is no longer waited for or closed; open or closed does not matter.

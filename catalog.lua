@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/catalog.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Tracking note: pressed whenever ready, window state
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  Version number only; no code change.
+                1.0.2  Tracking note: pressed whenever ready, window state
                        does not matter.
                 1.0.1  Version number only; no code change.
                 1.0.0  First release. Merges the skill lists of Skills2 0.4.2

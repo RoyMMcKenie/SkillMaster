@@ -1,8 +1,12 @@
 --[[==========================================================================
   FILE        : skillmaster/travel.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Version number only; no code change.
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  Begging no longer moves you when you are already within
+                       beggingRange of the NPC. Further away it walks
+                       straight to the NPC with /nav id; the fixed Skills2
+                       spot is only a fallback when the NPC is not found.
+                1.0.2  Version number only; no code change.
                 1.0.1  Before each beg, Sneak is turned off (Me.Sneaking,
                        one /doability "Sneak") and Hide / invisibility is
                        dropped with /makemevisible. Begging handles "How can you beg from someone when
@@ -17,8 +21,9 @@
                        any step, and travel home when finished.
 
   WHAT  : Runs the two skills that need the character somewhere specific:
-            Begging    travel to West Freeport, walk to Diggs, beg him until
-                       Begging is mastered, travel back.
+            Begging    travel to West Freeport (skipped when already there),
+                       stay put if already beside Diggs, else walk straight
+                       to Diggs, beg until Begging is mastered, travel back.
             Safe Fall  travel to the Plane of Knowledge, walk to a ledge,
                        hold forward to step off, walk back up, repeat.
 
@@ -32,7 +37,9 @@
 
   HOW   : A trip is a small state machine stored in travel.trip:
             phase 'zone'   /travelto <zone> (MQ2EasyFind) until there
-            phase 'spot'   /nav locxy or /nav locxyz (MQ2Nav) to the spot
+            phase 'spot'   Begging: nothing if within beggingRange of the NPC,
+                           else /nav id to the NPC (fixed spot only as a
+                           fallback). Safe Fall: /nav locxyz to the ledge.
             phase 'work'   beg or fall, once per tick
             phase 'home'   /travelto <return zone> (Begging only)
             phase 'done'
@@ -165,6 +172,63 @@ local function fail(reason)
 end
 
 --[[--------------------------------------------------------------------------
+  findNpc() / npcDistance(id)
+
+  WHAT  : findNpc returns the spawn ID of the Begging NPC in this zone, or
+          nil. npcDistance returns the live distance to that ID (999 when
+          gone).
+  WHY   : The trip must know whether you are already beside the NPC before
+          it moves you anywhere.
+  WHERE : walkToNpc and begOnce.
+  HOW   : Spawn TLO with the search 'npc <name>' (same search /mqtarget
+          uses), then Spawn('id N').Distance.
+  WHEN  : In the spot and work phases.
+----------------------------------------------------------------------------]]
+local function findNpc()
+    local id = mq.TLO.Spawn('npc ' .. config.settings.beggingNpc).ID()   -- nil or 0 when not up
+    if id and id > 0 then return id end
+    return nil  -- not in this zone right now
+end
+
+local function npcDistance(id)  -- see doc block above
+    return tonumber(mq.TLO.Spawn('id ' .. id).Distance()) or 999         -- gone counts as far
+end
+
+--[[--------------------------------------------------------------------------
+  walkToNpc()
+
+  WHAT  : Gets you within beggingRange of the Begging NPC with as little
+          movement as possible. Returns true when in range.
+  WHY   : 1.0.2 always walked to the fixed Skills2 spot, so standing next to
+          Diggs still ran you across the zone.
+  WHERE : travel.tick phase 'spot', and begOnce when the NPC wandered off.
+  HOW   : 1. NPC found and within beggingRange: do nothing at all.
+          2. NPC found but further: /nav id <id> (MQ2Nav), wait until within
+             range, /nav stop.
+          3. NPC not found: fall back to the fixed spot with /nav locxy,
+             then look again.
+  WHEN  : When the trip reaches the zone, and before a beg if out of range.
+----------------------------------------------------------------------------]]
+local function walkToNpc()
+    local s = config.settings
+    local id = findNpc()                                                 -- NPC here?
+    if id and npcDistance(id) <= s.beggingRange then return true end     -- already beside: no movement
+    if not plugins.navReady() then return false end                      -- cannot walk anywhere
+    if not id then                                                       -- not in view: the old spot
+        local ok = navTo(string.format('/nav locxy %s %s', s.beggingLocXY[1], s.beggingLocXY[2]))
+        if not ok then return false end                                  -- no path to the spot
+        id = findNpc()                                                   -- look again from there
+        if not id then return false end                                  -- still nowhere
+        if npcDistance(id) <= s.beggingRange then return true end        -- the spot was close enough
+    end
+    stats.log('Walking to %s (%d away)', s.beggingNpc, math.floor(npcDistance(id)))
+    utils.cmd('/nav id %d', id)                                          -- MQ2Nav straight to the NPC
+    utils.delay(NAV_MS, function() return npcDistance(id) <= s.beggingRange end)  -- until in range
+    utils.cmd('/nav stop')                                               -- stop beside the NPC
+    return npcDistance(id) <= s.beggingRange
+end
+
+--[[--------------------------------------------------------------------------
   begOnce()
 
   WHAT  : One Begging attempt on the configured NPC.
@@ -204,7 +268,13 @@ local function begOnce()
         utils.delay(1500, function() return mq.TLO.Me.Invis() ~= true end)  -- give the game a moment
         return true                                                      -- beg on the next tick
     end
-    if utils.lower(mq.TLO.Target.CleanName()) ~= utils.lower(npc) then
+    -- NPC wandered out of range: walk to it (never to the fixed spot
+    -- while it is in view). In range: no movement.
+    local id = findNpc()                                                 -- NPC spawn ID
+    if id and npcDistance(id) > config.settings.beggingRange then
+        if not walkToNpc() then return false, npc .. ' is out of range' end
+    end
+    if utils.lower(mq.TLO.Target.CleanName()) ~= utils.lower(npc) then  -- not targeted yet
         utils.cmd('/mqtarget npc %s', npc)                               -- spawn search
         if not utils.delay(1500, function() return mq.TLO.Target.ID() ~= nil end) then
             return false, npc .. ' not found'
@@ -305,12 +375,13 @@ function travel.tick(entry)
         t.status = 'walking to the spot'  -- for the window
         local cmd                                                         -- nav command for the spot
         if isBeg then
-            cmd = string.format('/nav locxy %s %s', s.beggingLocXY[1], s.beggingLocXY[2])
+            -- Begging: no movement when already beside the NPC.
+            if not walkToNpc() then fail('could not get within range of ' .. s.beggingNpc) return false end
         else
             local l = s.safeFallLocXYZ  -- ledge x y z
             cmd = string.format('/nav locxyz %s %s %s', l[1], l[2], l[3])  -- MQ2Nav to a 3D loc
+            if not navTo(cmd) then fail('no nav mesh or path to the spot') return false end  -- no mesh or path
         end
-        if not navTo(cmd) then fail('no nav mesh or path to the spot') return false end  -- no mesh or path
         t.phase = 'work'  -- next: beg or fall
     elseif t.phase == 'work' then  -- the actual training
         if skills.mastered(entry) then  -- capped: finish the trip
@@ -345,16 +416,22 @@ end
   WHAT  : Stops any movement the trip started and forgets the trip.
   WHY   : Stop must leave the character standing still.
   WHERE : runner.stop.
-  HOW   : /nav stop and /travelto stop when a trip exists, release the
-          forward key, clear travel.trip.
+  HOW   : /nav stop only while MQ2Nav is moving, /travelto stop only in
+          the zone or home phase, forward key released only for Safe Fall,
+          then clear travel.trip.
   WHEN  : End of a run.
 ----------------------------------------------------------------------------]]
 function travel.cancel()
     -- Nothing started, nothing to stop.
     if not travel.trip then return end
-    if plugins.has('MQ2Nav') then utils.cmd('/nav stop') end              -- stop walking
-    if plugins.has('MQ2EasyFind') then utils.cmd('/travelto stop') end    -- stop zone travel
-    utils.cmd('/nomodkey /keypress forward')                              -- release forward just in case
+    local t = travel.trip                                                 -- trip being cancelled
+    -- Only stop what is actually moving, so a run that never moved you
+    -- sends no movement commands at all.
+    if plugins.has('MQ2Nav') and mq.TLO.Navigation.Active() == true then utils.cmd('/nav stop') end  -- stop walking
+    if plugins.has('MQ2EasyFind') and (t.phase == 'zone' or t.phase == 'home') then
+        utils.cmd('/travelto stop')                                       -- stop zone travel
+    end
+    if t.key == 'safefall' then utils.cmd('/nomodkey /keypress forward') end  -- release forward just in case
     travel.trip = nil  -- next tick starts fresh
     travel.unseenPending, travel.unseenTries, lastBegValue = false, 0, nil  -- fresh count next trip
 end

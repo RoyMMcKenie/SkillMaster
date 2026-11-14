@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/init.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Version 1.0.2.
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  Version 1.0.3.
+                1.0.2  Version 1.0.2.
                 1.0.1  Registers and removes the Begging "can't see you"
                        event (travel.init / travel.shutdown).
                 1.0.0  First release. One entry point and one /skm command
@@ -52,7 +53,7 @@ local travel  = require('skillmaster.travel')   -- begging chat event
 -- WHERE: startup message.
 -- HOW  : Must match CHANGELOG.md.
 -- WHEN : Once.
-local VERSION = '1.0.2'
+local VERSION = '1.0.3'
 
 --[[--------------------------------------------------------------------------
   printHelp()

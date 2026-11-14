@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/README.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.2
+  VERSION : 1.0.3
   WHAT    : What SkillMaster does, how to install it, how to use the window
             and commands, and what has not been verified in game yet.
   WHY     : First thing to read before running or editing the package.
@@ -9,7 +9,7 @@
             covers versions.
   WHEN    : Read before first use; update when behaviour or commands change.
 -->
-# SkillMaster 1.0.2
+# SkillMaster 1.0.3
 
 SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window. It merges the two earlier scripts, Skills2 0.4.2 (Blasty) and skillup.lua 1.1, into one modular, fully documented package.
 
@@ -71,6 +71,8 @@ Tabs:
 
 ## Safety
 
+- Begging movement: if you are already in West Freeport, there is no zone travel. If you are already within Begging range (Options, default 15) of Diggs, you are not moved at all. If Diggs is in the zone but further away, you walk straight to Diggs with `/nav id`. The fixed Skills2 spot is used only when Diggs cannot be found. When Begging is mastered you stay where you are unless you type a Return zone in Options.
+
 - Begging: before each beg, Sneak is turned off and Hide or invisibility is dropped with `/makemevisible`, because the NPC must see you. If EverQuest still answers "can't see you" after three tries, the trip stops with that reason.
 
 - Spells with charm, fear, bind affinity, gate, pet summon, shadowstep, teleport, evacuate or translocate effects are never picked automatically (SPA list in `catalog.lua`, from the [MacroQuest SPA list](https://docs.macroquest.org/reference/general/spa-list/)).
@@ -92,7 +94,7 @@ These came from the original scripts or from documentation and need a live check
 
 ```
 pip install lupa
-python dev/smoke_test.py     # fake MacroQuest, nine scenarios, every tab drawn
+python dev/smoke_test.py     # fake MacroQuest, eleven scenarios, every tab drawn
 python dev/doc_audit.py      # documentation standard
 ```
 

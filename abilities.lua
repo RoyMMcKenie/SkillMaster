@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/abilities.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Tracking is pressed whenever it is ready and no
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  Version number only; no code change.
+                1.0.2  Tracking is pressed whenever it is ready and no
                        longer waits for or closes the Tracking window.
                 1.0.1  Version number only; no code change.
                 1.0.0  First release. Brings together the ability handling of

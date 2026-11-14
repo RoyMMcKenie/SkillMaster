@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/ARCHITECTURE.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.2
+  VERSION : 1.0.3
   WHAT    : How the package is built: module map, data flow, the run loop,
             the documentation standard, settings, and every game / plugin
             command it sends with where it was checked.
@@ -76,7 +76,8 @@ Enforced by `dev/doc_audit.py`, which must PASS before a release:
 | destroySummoned | true | destroy NoRent items produced by a training cast |
 | combatTargetSource | 'target' | 'target' or 'merc' (unverified) |
 | meleeRange | 12 | navigate closer than this |
-| beggingZone / beggingNpc / beggingLocXY / beggingReturn | freeportwest / Diggs / 132,-120 / poknowledge | Begging trip (from Skills2) |
+| beggingZone / beggingNpc / beggingLocXY / beggingReturn | freeportwest / Diggs / 132,-120 / blank | Begging trip (from Skills2); the loc is only a fallback when the NPC is not found; a blank return zone stays put |
+| beggingRange | 15 | within this distance of the NPC you are not moved |
 | safeFallZone / safeFallLocXYZ / safeFallHoldMs | poknowledge / 803,-376,-96 / 1200 | Safe Fall trip (from Skills2) |
 | stopWhenDone / beepWhenDone | true / true | finish behaviour |
 | blockOnErrors | true | red warnings block Start |
@@ -108,7 +109,7 @@ TLO members and ImGui calls were checked against [mq-definitions](https://github
 
 ## Testing
 
-- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
+- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, never the fixed spot). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
 - `dev/doc_audit.py`: documentation standard.
 
 <!--

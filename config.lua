@@ -1,8 +1,11 @@
 --[[==========================================================================
   FILE        : skillmaster/config.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Version number only; no code change.
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  New setting beggingRange (default 15): already this
+                       close to the Begging NPC means no movement.
+                       beggingReturn now defaults to blank (stay put).
+                1.0.2  Version number only; no code change.
                 1.0.1  Version number only; no code change.
                 1.0.0  First release. Replaces the Skills2.ini file and the
                        hard coded tables of skillup.lua with one saved
@@ -108,8 +111,11 @@ config.DEFAULTS = {
     -- Begging trip, from Skills2: travel to West Freeport and beg Diggs.
     beggingZone   = 'freeportwest',
     beggingNpc    = 'Diggs',
+    -- Already this close to the NPC: do not move at all. Further away but
+    -- in the zone: walk straight to the NPC (/nav id), not to the fixed spot.
+    beggingRange  = 15,
     beggingLocXY  = { 132, -120 },     -- /nav locxy X Y used by Skills2
-    beggingReturn = 'poknowledge',     -- travel here when begging is done
+    beggingReturn = '',                -- zone to travel to when done; blank stays put
 
     -- Safe Fall trip, from Skills2: a ledge in the Plane of Knowledge.
     safeFallZone   = 'poknowledge',
@@ -219,6 +225,7 @@ function config.load()
     s.stopHpPct      = utils.clamp(s.stopHpPct, 0, 95)
     s.specGuardValue = utils.clamp(s.specGuardValue, 1, 400)
     s.meleeRange     = utils.clamp(s.meleeRange, 5, 50)
+    s.beggingRange   = utils.clamp(s.beggingRange, 5, 50)    -- begging distance
     s.safeFallHoldMs = utils.clamp(s.safeFallHoldMs, 200, 5000)  -- hold long enough to step off, never stuck
 
     -- Hand utils a getter for the debug flag (avoids a circular require).

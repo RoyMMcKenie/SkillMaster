@@ -1,12 +1,14 @@
 --[[==========================================================================
   FILE        : skillmaster/runner.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Version number only; no code change.
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  A trip whose skill reaches its cap now finishes its
+                       way home (Begging return zone) before the run ends.
+                1.0.2  Version number only; no code change.
                 1.0.1  The run stops with the trip's reason when a failed
-                       trip is all that is left. Hide, Sneak and Feign Death are no longer trained at
-                       the Begging spot (they made the NPC unable to see
-                       you).
+                       trip is all that is left. Hide, Sneak and Feign
+                       Death are no longer trained at the Begging spot
+                       (they made the NPC unable to see you).
                 1.0.0  First release. Replaces the separate loops of Skills2
                        (/SPA, /SAA, /SS, /SBEG, /SSAFE, /SDA) and the single
                        loop of skillup.lua with one runner that trains every
@@ -350,6 +352,16 @@ function runner.tick()
     local act, why = safety()
     if act == 'stop' then runner.stop('Safety stop: ' .. why) return end
     if act == 'wait' then runner.status = 'Waiting: ' .. why return end
+
+    -- 1b. A trip whose skill just reached its cap still finishes: Begging
+    --     travels home to beggingReturn (blank = stay), Safe Fall just ends.
+    if travel.trip and (travel.trip.phase == 'work' or travel.trip.phase == 'home') then
+        local e = catalog.byKey(travel.trip.key)                          -- the trip's entry
+        if e and skills.mastered(e) and travel.tick(e) then               -- still on its way
+            runner.status = 'Trip: ' .. (travel.trip and travel.trip.status or '')  -- show the step
+            return
+        end
+    end
 
     -- 2. Anything left?
     local active = runner.activeEntries()  -- what still needs work

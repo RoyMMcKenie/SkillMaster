@@ -2,8 +2,9 @@
 =============================================================================
   FILE        : skillmaster/dev/smoke_test.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Tracking scenarios (window open and closed).
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  Begging distance scenarios (beside Diggs, far from Diggs).
+                1.0.2  Tracking scenarios (window open and closed).
                 1.0.1  Begging scenarios added (hidden, sneaking, unseen spam).
                 1.0.0  First version, built the same way as the ClericFood
                        smoke test.
@@ -45,6 +46,10 @@
                        Tracking 4/20 pressed whenever ready to cap, with
                        the Tracking window open and closed; the window is
                        never closed or changed
+            begnear    already beside Diggs: no /nav and no /travelto,
+                       not even after Begging caps
+            begfar     Diggs across the zone: /nav id to Diggs, never the
+                       fixed spot
             begstuck   /makemevisible does nothing: no beg is sent and the
                        run stops with the trip's reason
 
@@ -129,6 +134,11 @@ if SCENARIO == 'cleric' or SCENARIO == 'pause' or SCENARIO == 'conflict' or SCEN
   spell('Halo of Light', 'Conjuration', 10, 'Self', true)
   spell('Strike', 'Evocation', 5, 'Single', false)
 end
+if SCENARIO == 'begnear' or SCENARIO == 'begfar' then      -- in West Freeport, visible
+  G.cls, G.maxMana, G.mana = 'WAR', 0, 0
+  G.zone, G.diggsDist = 'freeportwest', SCENARIO == 'begnear' and 6 or 80
+  skill('Begging', 0, 10)
+end
 if SCENARIO == 'beg' or SCENARIO == 'begstuck' then        -- warrior at the begging spot
   G.cls, G.maxMana, G.mana = 'WAR', 0, 0
   G.zone, G.invis, G.sneak = 'freeportwest', true, true   -- starts hidden and sneaking
@@ -178,7 +188,11 @@ TLO.Navigation = { MeshLoaded = val(true), Active = val(false) }
 TLO.Mercenary = { ID = val(nil) }
 TLO.Target = { ID = function() return G.target end, Type = function() return G.target and G.targetType end,
                Dead = val(false), CleanName = function() return G.targetName or 'a rat' end }
-TLO.Spawn = function() return { Distance = val(5) } end
+TLO.Spawn = function(q)                                     -- Diggs is spawn 900
+  if q == 'npc Diggs' then return { ID = val(900), Distance = function() return G.diggsDist or 5 end } end
+  if q == 'id 900' then return { ID = val(900), Distance = function() return G.diggsDist or 5 end } end
+  return { ID = val(nil), Distance = val(5) }
+end
 TLO.Cast = { Status = val('I'), Result = function() return G.result end }
 TLO.Cursor = { ID = function() return G.cursor and 1 or nil end,
                Name = function() return G.cursor end, NoRent = function() return G.cursor ~= nil end }
@@ -250,6 +264,7 @@ function mq.cmd(c)
     if ab == 'Feign Death' then G.feign = true end
   end
   if c == '/makemevisible' and SCENARIO ~= 'begstuck' then G.invis = false end  -- begstuck: it does not work
+  if c == '/nav id 900' then G.diggsDist = 5 end             -- arrive beside Diggs
   if c == '/mqtarget npc Diggs' then G.target, G.targetName = 900, 'Diggs' end
   local tz = c:match('^/travelto (%a+)$'); if tz and tz ~= 'stop' then G.zone = tz end
   if c == '/sit' then G.sitting = true end
@@ -312,6 +327,8 @@ local sel = {
   begstuck = { 'begging' },
   tracking_open   = { 'tracking' },
   tracking_closed = { 'tracking' },
+  begnear  = { 'begging' },
+  begfar   = { 'begging' },
   monk     = { 'mend', 'sneak', 'feign', 'kick' },
 }
 for _, k in ipairs(sel[SCENARIO]) do config.setSelected(k, true) end
@@ -360,6 +377,7 @@ return {
     return false
   end)(),
   tripStatus = travel_status,
+  navAny = has('/nav'), navId = has('/nav id 900'), navLoc = has('/nav locxy'), travelTo = has('/travelto freeportwest'), travelHome = has('/travelto poknowledge'),
   track = G.skills['Tracking'].cur, tracks = G.tracks or 0, closed = G.closed or 0, trackWnd = G.trackWnd,
 }
 '''
@@ -403,6 +421,15 @@ def check(scenario, o):
         if o['closed'] != 0: bad.append('Tracking window was closed')
         if o['trackWnd'] != (scenario == 'tracking_open'): bad.append('window state changed')
         if o['still']: bad.append('run did not finish')
+    elif scenario == 'begnear':
+        if o['beg'] != 10: bad.append('Begging not at cap')
+        if o['navAny']: bad.append('a /nav command was sent while already beside Diggs')
+        if o['travelTo']: bad.append('travelled to the zone it was already in')
+        if o['travelHome']: bad.append('travelled away after Begging capped (Return zone is blank)')
+    elif scenario == 'begfar':
+        if o['beg'] != 10: bad.append('Begging not at cap')
+        if not o['navId']: bad.append('did not walk straight to Diggs')
+        if o['navLoc']: bad.append('walked to the fixed spot although Diggs was found')
     elif scenario == 'conflict':
         if o['casts'] != 0: bad.append('cast despite mutually exclusive specializations')
     elif scenario == 'guard':
@@ -448,7 +475,7 @@ def main():
     WHEN  : From the command line.
     """
     names = ('cleric', 'pause', 'conflict', 'guard', 'monk', 'beg', 'begstuck',
-             'tracking_open', 'tracking_closed')                # every scenario
+             'tracking_open', 'tracking_closed', 'begnear', 'begfar')                # every scenario
     only = os.getenv('SKM_ONLY')                                   # optional single scenario
     results = [run(s) for s in names if not only or s == only]
     print('ALL PASS' if all(results) else 'SOME FAILED')

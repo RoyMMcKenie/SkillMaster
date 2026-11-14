@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/ui.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.2
-  CHANGES     : 1.0.2  Version number only; no code change.
+  VERSION     : 1.0.3
+  CHANGES     : 1.0.3  Options: Begging range box.
+                1.0.2  Version number only; no code change.
                 1.0.1  Version number only; no code change.
                 1.0.0  First release. New window; Skills2 and skillup.lua
                        were driven only by slash commands.
@@ -561,6 +562,7 @@ function ui.drawOptions()
     ImGui.SeparatorText('Trips')  -- trip options
     textBox('Begging zone', 'beggingZone', 'Zone short name for /travelto.')  -- Begging destination
     textBox('Begging NPC', 'beggingNpc')  -- NPC to beg
+    intBox('Begging range', 'beggingRange', 5, 50, 'Already this close to the NPC: you are not moved. Further away: you walk straight to the NPC.')  -- no move inside this
     textBox('Return zone', 'beggingReturn', 'Blank stays in the begging zone.')  -- travel home afterwards
     textBox('Safe Fall zone', 'safeFallZone')  -- Safe Fall destination
     intBox('Forward hold ms', 'safeFallHoldMs', 200, 5000, 'How long forward is held to step off the ledge.')  -- forward hold time
