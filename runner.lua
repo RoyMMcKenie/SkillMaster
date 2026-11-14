@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/runner.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.3
-  CHANGES     : 1.0.3  A trip whose skill reaches its cap now finishes its
+  VERSION     : 1.0.4
+  CHANGES     : 1.0.4  runner.endScript flag for the End SkillMaster button.
+                1.0.3  A trip whose skill reaches its cap now finishes its
                        way home (Begging return zone) before the run ends.
                 1.0.2  Version number only; no code change.
                 1.0.1  The run stops with the trip's reason when a failed
@@ -76,6 +77,9 @@ runner.status     = 'Idle'     -- one line for the window
 runner.request    = nil        -- 'start' | 'stop' | 'pause' | 'resume' | nil
 runner.meditating = false      -- true while sitting to recover mana
 runner.quitting   = false      -- set by /skm quit and the window close
+runner.endScript  = false      -- set by the End SkillMaster button and /skm end:
+                               -- after the tidy shutdown, init.lua sends
+                               -- /lua stop skillmaster
 
 local lastTick   = 0           -- utils.now() of the previous tick, for run time
 local castTurn   = 0           -- round robin position over schools
@@ -442,7 +446,7 @@ return runner  -- hand the module table to whoever requires it
   END OF FILE : skillmaster/runner.lua
 
   PUBLIC
-    state, status, request, meditating, quitting
+    state, status, request, meditating, quitting, endScript
     activeEntries(), start(), stop(reason), pause(), resume(), process(),
     tick()
 

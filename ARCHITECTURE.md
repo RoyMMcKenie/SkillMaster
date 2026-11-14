@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/ARCHITECTURE.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.3
+  VERSION : 1.0.4
   WHAT    : How the package is built: module map, data flow, the run loop,
             the documentation standard, settings, and every game / plugin
             command it sends with where it was checked.
@@ -30,6 +30,8 @@
 | `conflicts.lua` | Every warning and error shown in the header; specialization state and guard | mq, config, catalog, plugins, skills, spells, abilities |
 | `runner.lua` | Run state (idle / running / paused), Start / Pause / Resume / Stop, one tick of work | everything above |
 | `ui.lua` | The ImGui window, six tabs, debounced settings save | everything above |
+
+End SkillMaster: the button (or `/skm end`) sets `runner.endScript` and `runner.quitting`; the loop ends, `shutdown()` restores gems, unpauses RGMercs and saves, and only then `init.lua` sends `/lua stop skillmaster`.
 
 Rule: lower modules never require higher ones. `ui` and `init` only set `runner.request`; the main loop applies it, so button presses never run game commands from inside the ImGui callback.
 
@@ -98,6 +100,7 @@ Every command goes through `utils.cmd`. Nothing outside this list is sent.
 | `/doability "<name>"` | abilities, travel | [MacroQuest /doability](https://docs.macroquest.org/reference/commands/doability/) |
 | `/destroy`, `/autoinventory` | spells | [MacroQuest /destroy](https://docs.macroquest.org/reference/commands/destroy/); `/autoinventory` is built in |
 | `/makemevisible` | travel | [MacroQuest /makemevisible](https://docs.macroquest.org/reference/commands/makemevisible/) |
+| `/lua stop skillmaster` | init (End SkillMaster button, `/skm end`), sent after the tidy shutdown | [MacroQuest Lua docs](https://docs.macroquest.org/lua/) |
 | `/beep` | runner | [MacroQuest /beep](https://docs.macroquest.org/reference/commands/beep/) |
 | `/nomodkey /keypress forward hold` and `/nomodkey /keypress forward` | travel | [MacroQuest /keypress](https://docs.macroquest.org/reference/commands/keypress/), [/nomodkey](https://docs.macroquest.org/reference/commands/nomodkey/) |
 | `/nav id <id>`, `/nav locxy`, `/nav locxyz`, `/nav stop` | abilities, travel, runner | [MQ2Nav command reference](https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference) |
@@ -109,7 +112,7 @@ TLO members and ImGui calls were checked against [mq-definitions](https://github
 
 ## Testing
 
-- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, never the fixed spot). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
+- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, never the fixed spot), endbutton (runs init.lua, presses End SkillMaster: gems restored and settings saved before `/lua stop skillmaster`). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
 - `dev/doc_audit.py`: documentation standard.
 
 <!--

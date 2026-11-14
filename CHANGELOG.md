@@ -6,6 +6,11 @@
 -->
 # SkillMaster changelog
 
+## 1.0.4 (2026-11-14)
+
+- End SkillMaster button in the window header (and `/skm end`). It stops any run, restores your gems, unpauses RGMercs and saves settings, then sends [`/lua stop skillmaster`](https://docs.macroquest.org/lua/).
+- Smoke test: endbutton scenario runs init.lua and presses the button.
+
 ## 1.0.3 (2026-11-14)
 
 - Begging no longer runs you across the zone when you are already at Diggs. Within Begging range (new Options setting, default 15) there is no movement at all. Further away, you walk straight to Diggs with `/nav id`; the fixed Skills2 spot is only a fallback when Diggs is not found. If Diggs wanders out of range during the trip, you walk back to Diggs.

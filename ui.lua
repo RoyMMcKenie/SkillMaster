@@ -1,15 +1,17 @@
 --[[==========================================================================
   FILE        : skillmaster/ui.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.3
-  CHANGES     : 1.0.3  Options: Begging range box.
+  VERSION     : 1.0.4
+  CHANGES     : 1.0.4  End SkillMaster button in the header, next to Stop.
+                1.0.3  Options: Begging range box.
                 1.0.2  Version number only; no code change.
                 1.0.1  Version number only; no code change.
                 1.0.0  First release. New window; Skills2 and skillup.lua
                        were driven only by slash commands.
 
   WHAT  : The SkillMaster window. Always visible at the top: run status,
-          Start / Pause / Stop buttons and the warning panel. Below, tabs:
+          Start / Pause / Stop / End SkillMaster buttons and the warning
+          panel. Below, tabs:
             Train       a "Master" checkbox per skill with a progress bar
                         (current of cap) and a live status
             Spells      the spell chosen per school, an override box, the
@@ -247,6 +249,11 @@ local function drawHeader()
     ImGui.BeginDisabled(runner.state == 'idle')                    -- nothing to stop
     if ImGui.Button('Stop') then runner.request = 'stop' end
     ImGui.EndDisabled()
+    ImGui.SameLine()
+    -- End SkillMaster: tidy shutdown (stop, gems back, RGMercs unpaused,
+    -- settings saved), then init.lua sends /lua stop skillmaster.
+    if ImGui.Button('End SkillMaster') then runner.endScript, runner.quitting = true, true end
+    tooltip('Stops the run, restores your gems, unpauses RGMercs, saves settings, then ends the script with /lua stop skillmaster.')  -- explain the button
     ImGui.SameLine()
     colored(C.info, string.format('Session %s, %d skill ups',  -- quick session summary
         utils.formatDuration(stats.data.runMs), stats.data.total))  -- format arguments
@@ -604,6 +611,7 @@ function ui.drawHelp()
         '/skm none       untick everything',  -- bulk untick
         '/skm status     print progress of ticked skills',  -- chat report
         '/skm quit       stop and close SkillMaster',  -- exit
+        '/skm end        same as the End SkillMaster button (/lua stop skillmaster)',  -- end the script
     }) do colored(C.accent, line) end  -- blue command lines
 end
 

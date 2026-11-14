@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/README.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.3
+  VERSION : 1.0.4
   WHAT    : What SkillMaster does, how to install it, how to use the window
             and commands, and what has not been verified in game yet.
   WHY     : First thing to read before running or editing the package.
@@ -9,7 +9,7 @@
             covers versions.
   WHEN    : Read before first use; update when behaviour or commands change.
 -->
-# SkillMaster 1.0.3
+# SkillMaster 1.0.4
 
 SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window. It merges the two earlier scripts, Skills2 0.4.2 (Blasty) and skillup.lua 1.1, into one modular, fully documented package.
 
@@ -35,7 +35,9 @@ If your character can train Tracking (it has a Tracking cap above zero), it appe
 
 ## Window
 
-Header (always visible): status line, Start / Pause (Resume) / Stop buttons, and the warning panel.
+Header (always visible): status line, Start / Pause (Resume) / Stop / End SkillMaster buttons, and the warning panel.
+
+- End SkillMaster: stops any run, restores your gems, unpauses RGMercs, saves settings, then ends the script with [`/lua stop skillmaster`](https://docs.macroquest.org/lua/).
 
 - Pause: every action stops at once. Nothing is cast, pressed or sent while paused. MQ2AutoForage and any trip are stopped; borrowed spell gems stay borrowed. Resume carries on where it left off. Stop ends the run and puts the gems back.
 - Warnings: red lines are errors and block Start (can be turned off in Options); yellow are advice.
@@ -60,6 +62,7 @@ Tabs:
 | `/skm status` | print progress of ticked skills |
 | `/skm all` / `/skm none` | tick every available skill / untick everything |
 | `/skm quit` | stop and close SkillMaster |
+| `/skm end` | same as the End SkillMaster button: tidy shutdown, then `/lua stop skillmaster` |
 | `/skm help` | list commands |
 
 ## Warnings it checks
@@ -94,7 +97,7 @@ These came from the original scripts or from documentation and need a live check
 
 ```
 pip install lupa
-python dev/smoke_test.py     # fake MacroQuest, eleven scenarios, every tab drawn
+python dev/smoke_test.py     # fake MacroQuest, twelve scenarios, every tab drawn
 python dev/doc_audit.py      # documentation standard
 ```
 

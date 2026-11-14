@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/config.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.3
-  CHANGES     : 1.0.3  New setting beggingRange (default 15): already this
+  VERSION     : 1.0.4
+  CHANGES     : 1.0.4  Version number only; no code change.
+                1.0.3  New setting beggingRange (default 15): already this
                        close to the Begging NPC means no movement.
                        beggingReturn now defaults to blank (stay put).
                 1.0.2  Version number only; no code change.

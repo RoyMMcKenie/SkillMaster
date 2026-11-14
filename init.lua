@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/init.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.3
-  CHANGES     : 1.0.3  Version 1.0.3.
+  VERSION     : 1.0.4
+  CHANGES     : 1.0.4  /skm end and the End SkillMaster button: tidy
+                       shutdown, then /lua stop skillmaster.
+                1.0.3  Version 1.0.3.
                 1.0.2  Version 1.0.2.
                 1.0.1  Registers and removes the Begging "can't see you"
                        event (travel.init / travel.shutdown).
@@ -28,7 +30,8 @@
           Shutdown: runner.stop (restores gems, unpauses RGMercs), save,
           remove the event and the command.
 
-  WHEN  : From /lua run skillmaster until /skm quit or /lua stop skillmaster.
+  WHEN  : From /lua run skillmaster until /skm quit, /skm end, the End
+          SkillMaster button, or /lua stop skillmaster.
 
   READING GUIDE (for future you)
     - The window and the command only set runner.request; the loop acts on
@@ -53,7 +56,18 @@ local travel  = require('skillmaster.travel')   -- begging chat event
 -- WHERE: startup message.
 -- HOW  : Must match CHANGELOG.md.
 -- WHEN : Once.
-local VERSION = '1.0.3'
+local VERSION = '1.0.4'
+
+--- Script name -----------------------------------------------------------------------
+-- WHAT : The name MacroQuest knows this script by: the folder name used in
+--        /lua run skillmaster.
+-- WHY  : The End SkillMaster button sends /lua stop <name>
+--        (https://docs.macroquest.org/lua/). Change it only if the folder is
+--        renamed.
+-- WHERE: endScript below.
+-- HOW  : Plain string.
+-- WHEN : Read once at the end.
+local SCRIPT_NAME = 'skillmaster'
 
 --[[--------------------------------------------------------------------------
   printHelp()
@@ -68,6 +82,7 @@ local function printHelp()
     -- Same list as the Help tab.
     utils.echo('/skm - show or hide the window')
     utils.echo('/skm start | pause | stop | quit')
+    utils.echo('/skm end - tidy shutdown, then /lua stop ' .. SCRIPT_NAME)  -- same as the End button
     utils.echo('/skm all - tick every available skill (no specializations or trips)')
     utils.echo('/skm none - untick everything')  -- clear every tick
     utils.echo('/skm status - progress of ticked skills')  -- progress report
@@ -112,6 +127,7 @@ local function onCommand(...)
     elseif arg == 'pause' then runner.request = 'pause'
     elseif arg == 'stop' then runner.request = 'stop'  -- stop and restore
     elseif arg == 'quit' then runner.quitting = true  -- ends the main loop
+    elseif arg == 'end' then runner.endScript, runner.quitting = true, true  -- tidy end, then /lua stop
     elseif arg == 'status' then printStatus()  -- chat report
     elseif arg == 'all' or arg == 'none' then  -- bulk tick changes
         if runner.state ~= 'idle' then utils.warn('Stop the run before changing ticks.') return end  -- gems are assigned at start, so no changes mid run
@@ -185,10 +201,15 @@ end
 
 shutdown()
 
+-- End SkillMaster button or /skm end: the tidy shutdown above has already
+-- put gems back, unpaused RGMercs and saved settings, so ending the script
+-- through MQ2Lua cannot lose anything.
+if runner.endScript then utils.cmd('/lua stop %s', SCRIPT_NAME) end  -- documented MQ2Lua stop
+
 --[[==========================================================================
   END OF FILE : skillmaster/init.lua
 
-  PUBLIC : none (entry point). Command: /skm [show|start|pause|stop|all|none|status|quit|help]
+  PUBLIC : none (entry point). Command: /skm [show|start|pause|stop|all|none|status|quit|end|help]
 
   DEPENDENCIES : mq, skillmaster.utils, config, catalog, skills, stats,
                  runner, ui

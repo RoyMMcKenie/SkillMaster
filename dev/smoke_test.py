@@ -2,8 +2,9 @@
 =============================================================================
   FILE        : skillmaster/dev/smoke_test.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.3
-  CHANGES     : 1.0.3  Begging distance scenarios (beside Diggs, far from Diggs).
+  VERSION     : 1.0.4
+  CHANGES     : 1.0.4  endbutton scenario runs init.lua and presses End SkillMaster.
+                1.0.3  Begging distance scenarios (beside Diggs, far from Diggs).
                 1.0.2  Tracking scenarios (window open and closed).
                 1.0.1  Begging scenarios added (hidden, sneaking, unseen spam).
                 1.0.0  First version, built the same way as the ClericFood
@@ -50,6 +51,9 @@
                        not even after Begging caps
             begfar     Diggs across the zone: /nav id to Diggs, never the
                        fixed spot
+            endbutton  runs the real init.lua, starts with /skm start, presses
+                       End SkillMaster: gems restored and RGMercs unpaused
+                       before the final /lua stop skillmaster
             begstuck   /makemevisible does nothing: no beg is sent and the
                        run stops with the trip's reason
 
@@ -121,7 +125,7 @@ end
 local function byName(n) for _, s in ipairs(G.book) do if s.name == n then return s end end end
 
 -- Scenario setup.
-if SCENARIO == 'cleric' or SCENARIO == 'pause' or SCENARIO == 'conflict' or SCENARIO == 'guard' then
+if SCENARIO == 'cleric' or SCENARIO == 'pause' or SCENARIO == 'endbutton' or SCENARIO == 'conflict' or SCENARIO == 'guard' then
   skill('Alteration', 10, 60); skill('Divination', 5, SCENARIO == 'guard' and 100 or 30)
   skill('Conjuration', 0, 30); skill('Evocation', 0, 50); skill('Abjuration', 0, 50)
   for _, s in ipairs({ 'Abjure','Alteration','Conjuration','Divination','Evocation' }) do
@@ -211,7 +215,8 @@ local now, evs, pending = 0, {}, {}
 local mq = { TLO = TLO, configDir = '/tmp',
   gettime = function() now = now + 50 return now end,
   pickle = function() end, unpickle = function() error('no file') end,
-  bind = function() end, unbind = function() end, imgui = { init = function() end },
+  bind = function(n, fn) G.binds = G.binds or {}; G.binds[n] = fn end, unbind = function() end,
+  imgui = { init = function(_, cb) G.uiCb = cb end },          -- keep the window callback
   event = function(n, _, cb) evs[n] = cb end, unevent = function(n) evs[n] = nil end,
   doevents = function()
     for _, p in ipairs(pending) do
@@ -224,6 +229,16 @@ local mq = { TLO = TLO, configDir = '/tmp',
 function mq.delay(ms, cond)
   local step = cond and 10 or ms
   now = now + step
+  if SCENARIO == 'endbutton' and ms == 100 and not cond then   -- init.lua main loop pass
+    G.loops = (G.loops or 0) + 1
+    if G.loops == 3 then                                        -- init.lua loaded settings by now
+      require('skillmaster.config').setSelected('alteration', true)
+      G.binds['/skm']('start')                                  -- /skm start
+    end
+    if G.loops == 40 then G.pressEnd = true end                 -- press End SkillMaster
+    if G.uiCb then G.uiCb() end                                 -- draw a frame
+    if G.loops > 500 then error('init.lua loop did not end') end
+  end
   if G.sitting and G.mana < G.maxMana then                  -- regen while sitting
     G.mana = math.min(G.maxMana, G.mana + 5)
     local m = G.skills['Meditate']                           -- Meditate rises while medding
@@ -295,7 +310,7 @@ local IM = {
   PopStyleColor = function(n) depth.push = depth.push - (n or 1) end,
   PushTextWrapPos = function() depth.wrap = depth.wrap + 1 end,
   PopTextWrapPos = function() depth.wrap = depth.wrap - 1 end,
-  Button = function() return false end, IsItemHovered = function() return true end,
+  Button = function(label) return label == 'End SkillMaster' and G.pressEnd == true end, IsItemHovered = function() return true end,
   CollapsingHeader = function() return true end,
   Checkbox = function(_, v) assert(type(v) == 'boolean', 'Checkbox needs a boolean') return v, false end,
   Combo = function(_, c) assert(type(c) == 'number', 'Combo needs a number') return c, false end,
@@ -313,6 +328,18 @@ local function renderAll()                                  -- draw the whole wi
   for k, v in pairs(depth) do assert(v == 0, 'unbalanced ImGui ' .. k .. ' ' .. v) end
 end
 print = function(...) if os.getenv('SKM_VERBOSE') then io.write(table.concat({...},' '),'\n') end end  -- quiet unless SKM_VERBOSE
+
+-- endbutton: run the real init.lua, press End SkillMaster mid run.
+if SCENARIO == 'endbutton' then
+  require('skillmaster')                                    -- init.lua: startup, loop, shutdown
+  local idx = {}
+  for i, c in ipairs(G.cmds) do idx[c] = idx[c] or i end      -- first position of each command
+  local last = G.cmds[#G.cmds]
+  return { ended = last == '/lua stop skillmaster', casts = #G.casts,
+           restoredFirst = (idx['/memspell 1 "Courage"'] or 1e9) < (idx['/lua stop skillmaster'] or 0),
+           unpausedFirst = (idx['/rgl unpause'] or 1e9) < (idx['/lua stop skillmaster'] or 0),
+           gem1 = G.gems[1], loops = G.loops, still = false, ticks = G.loops, gains = 0 }
+end
 
 -- Run.
 local config = require('skillmaster.config'); config.load()
@@ -430,6 +457,12 @@ def check(scenario, o):
         if o['beg'] != 10: bad.append('Begging not at cap')
         if not o['navId']: bad.append('did not walk straight to Diggs')
         if o['navLoc']: bad.append('walked to the fixed spot although Diggs was found')
+    elif scenario == 'endbutton':
+        if not o['ended']: bad.append('/lua stop skillmaster was not the last command')
+        if o['casts'] == 0: bad.append('the run never started before End was pressed')
+        if not o['restoredFirst']: bad.append('gems were not restored before /lua stop')
+        if not o['unpausedFirst']: bad.append('RGMercs was not unpaused before /lua stop')
+        if o['gem1'] != 'Courage': bad.append('gem 1 not restored')
     elif scenario == 'conflict':
         if o['casts'] != 0: bad.append('cast despite mutually exclusive specializations')
     elif scenario == 'guard':
@@ -475,7 +508,7 @@ def main():
     WHEN  : From the command line.
     """
     names = ('cleric', 'pause', 'conflict', 'guard', 'monk', 'beg', 'begstuck',
-             'tracking_open', 'tracking_closed', 'begnear', 'begfar')                # every scenario
+             'tracking_open', 'tracking_closed', 'begnear', 'begfar', 'endbutton')                # every scenario
     only = os.getenv('SKM_ONLY')                                   # optional single scenario
     results = [run(s) for s in names if not only or s == only]
     print('ALL PASS' if all(results) else 'SOME FAILED')

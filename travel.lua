@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/travel.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.3
-  CHANGES     : 1.0.3  Begging no longer moves you when you are already within
+  VERSION     : 1.0.4
+  CHANGES     : 1.0.4  Version number only; no code change.
+                1.0.3  Begging no longer moves you when you are already within
                        beggingRange of the NPC. Further away it walks
                        straight to the NPC with /nav id; the fixed Skills2
                        spot is only a fallback when the NPC is not found.
