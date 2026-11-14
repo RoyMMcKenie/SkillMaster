@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/runner.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  runner.endScript flag for the End SkillMaster button.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Version number only; no code change.
+                1.0.4  runner.endScript flag for the End SkillMaster button.
                 1.0.3  A trip whose skill reaches its cap now finishes its
                        way home (Begging return zone) before the run ends.
                 1.0.2  Version number only; no code change.

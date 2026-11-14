@@ -2,8 +2,10 @@
 =============================================================================
   FILE        : skillmaster/dev/smoke_test.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  endbutton scenario runs init.lua and presses End SkillMaster.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Safe Fall scenarios: recorded ledge (fall), nothing
+                       recorded (fallunset), ledge in PoK (fallpok).
+                1.0.4  endbutton scenario runs init.lua and presses End SkillMaster.
                 1.0.3  Begging distance scenarios (beside Diggs, far from Diggs).
                 1.0.2  Tracking scenarios (window open and closed).
                 1.0.1  Begging scenarios added (hidden, sneaking, unseen spam).
@@ -56,6 +58,11 @@
                        before the final /lua stop skillmaster
             begstuck   /makemevisible does nothing: no beg is sent and the
                        run stops with the trip's reason
+            fall       ledge and landing recorded, standing on the ledge: no
+                       walk before the first step, /face fast loc toward the
+                       landing, forward held and released, /nav locyxz back
+            fallunset  Safe Fall ticked with nothing recorded: no movement
+            fallpok    ledge recorded in PoK: red warning, nothing sent
 
   WHEN  : After any change to logic in runner, spells, abilities, conflicts.
 
@@ -153,6 +160,12 @@ if SCENARIO == 'tracking_open' or SCENARIO == 'tracking_closed' then   -- ranger
   G.trackWnd = SCENARIO == 'tracking_open'                -- window state must not matter
   skill('Tracking', 4, 20)
 end
+if SCENARIO == 'fall' or SCENARIO == 'fallunset' or SCENARIO == 'fallpok' then  -- warrior on a ledge
+  G.cls, G.maxMana, G.mana = 'WAR', 0, 0
+  G.zone = SCENARIO == 'fallpok' and 'poknowledge' or 'lavastorm'
+  G.pos = { 100, 200, 50 }                                  -- standing on the ledge
+  skill('Safe Fall', 0, 5)
+end
 if SCENARIO == 'monk' then
   G.cls, G.maxMana, G.mana = 'MNK', 0, 0
   skill('Mend', 3, 10); skill('Sneak', 0, 8); skill('Feign Death', 0, 6); skill('Kick', 2, 12)
@@ -183,6 +196,9 @@ TLO.Me = {
   Invis = function() return G.invis == true end, Sneaking = function() return G.sneak == true end,
   Inventory = function() return { Type = val('Shield'), Name = val('Shield') } end,
   Casting = { ID = val(nil) },
+  Y = function() return (G.pos or {0,0,0})[1] end,          -- position, y x z like Safe Fall stores
+  X = function() return (G.pos or {0,0,0})[2] end,
+  Z = function() return (G.pos or {0,0,0})[3] end,
 }
 TLO.Skill = function(k) local n = sk(k)
   return { ID = val(G.ids[n]), Name = val(G.ids[n] and n or nil) } end
@@ -280,6 +296,13 @@ function mq.cmd(c)
   end
   if c == '/makemevisible' and SCENARIO ~= 'begstuck' then G.invis = false end  -- begstuck: it does not work
   if c == '/nav id 900' then G.diggsDist = 5 end             -- arrive beside Diggs
+  local ny, nx, nz = c:match('^/nav locyxz (%S+) (%S+) (%S+)$')  -- walk to a y x z spot
+  if ny then G.pos = { tonumber(ny), tonumber(nx), tonumber(nz) } end
+  if c == '/nomodkey /keypress forward hold' then G.fwd = true end
+  if c == '/nomodkey /keypress forward' and G.fwd then       -- released: stepped off and fell
+    G.fwd = false; G.falls = (G.falls or 0) + 1
+    G.pos = { 110, 200, 20 }; raise('Safe Fall')
+  end
   if c == '/mqtarget npc Diggs' then G.target, G.targetName = 900, 'Diggs' end
   local tz = c:match('^/travelto (%a+)$'); if tz and tz ~= 'stop' then G.zone = tz end
   if c == '/sit' then G.sitting = true end
@@ -345,6 +368,10 @@ end
 local config = require('skillmaster.config'); config.load()
 local stats = require('skillmaster.stats'); stats.init()
 local runner = require('skillmaster.runner'); require('skillmaster.ui')
+if SCENARIO == 'fall' or SCENARIO == 'fallpok' then         -- spots recorded in Options
+  local s = config.settings
+  s.safeFallZone, s.safeFallLedge, s.safeFallLanding = G.zone, { 100, 200, 50 }, { 110, 200, 20 }
+end
 local sel = {
   pause    = { 'alteration', 'divination', 'conjuration', 'spec_alteration' },
   cleric   = { 'alteration', 'divination', 'conjuration', 'spec_alteration', 'meditate' },
@@ -357,6 +384,9 @@ local sel = {
   begnear  = { 'begging' },
   begfar   = { 'begging' },
   monk     = { 'mend', 'sneak', 'feign', 'kick' },
+  fall     = { 'safefall' },
+  fallunset = { 'safefall' },
+  fallpok  = { 'safefall' },
 }
 for _, k in ipairs(sel[SCENARIO]) do config.setSelected(k, true) end
 renderAll()                                                -- idle window
@@ -405,6 +435,16 @@ return {
   end)(),
   tripStatus = travel_status,
   navAny = has('/nav'), navId = has('/nav id 900'), navLoc = has('/nav locxy'), travelTo = has('/travelto freeportwest'), travelHome = has('/travelto poknowledge'),
+  safe = G.skills['Safe Fall'].cur, falls = G.falls or 0,
+  faced = has('/face fast loc 110.00,200.00'), navBack = has('/nav locyxz 100.00 200.00 50.00'),
+  firstNavAfterFall = (function()                          -- no walk before the first step off
+    for _, c in ipairs(G.cmds) do
+      if c:find('/nav', 1, true) then return false end
+      if c == '/nomodkey /keypress forward hold' then return true end
+    end
+    return true
+  end)(),
+  keyAny = has('/keypress'),
   track = G.skills['Tracking'].cur, tracks = G.tracks or 0, closed = G.closed or 0, trackWnd = G.trackWnd,
 }
 '''
@@ -457,6 +497,16 @@ def check(scenario, o):
         if o['beg'] != 10: bad.append('Begging not at cap')
         if not o['navId']: bad.append('did not walk straight to Diggs')
         if o['navLoc']: bad.append('walked to the fixed spot although Diggs was found')
+    elif scenario == 'fall':
+        if o['safe'] != 5: bad.append('Safe Fall not at cap (got %s)' % o['safe'])
+        if not o['faced']: bad.append('did not face the landing spot with /face fast loc')
+        if not o['navBack']: bad.append('did not walk back with /nav locyxz')
+        if not o['firstNavAfterFall']: bad.append('moved before the first fall although already on the ledge')
+        if o['navLoc']: bad.append('used /nav locxy or /nav locxyz')
+    elif scenario in ('fallunset', 'fallpok'):
+        if o['keyAny']: bad.append('stepped off although the ledge is unusable')
+        if o['navAny']: bad.append('moved although the ledge is unusable')
+        if o['still']: bad.append('run did not stop')
     elif scenario == 'endbutton':
         if not o['ended']: bad.append('/lua stop skillmaster was not the last command')
         if o['casts'] == 0: bad.append('the run never started before End was pressed')
@@ -508,7 +558,7 @@ def main():
     WHEN  : From the command line.
     """
     names = ('cleric', 'pause', 'conflict', 'guard', 'monk', 'beg', 'begstuck',
-             'tracking_open', 'tracking_closed', 'begnear', 'begfar', 'endbutton')                # every scenario
+             'tracking_open', 'tracking_closed', 'begnear', 'begfar', 'endbutton', 'fall', 'fallunset', 'fallpok')                # every scenario
     only = os.getenv('SKM_ONLY')                                   # optional single scenario
     results = [run(s) for s in names if not only or s == only]
     print('ALL PASS' if all(results) else 'SOME FAILED')

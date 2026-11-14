@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/spells.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Version number only; no code change.
+                1.0.4  Version number only; no code change.
                 1.0.3  Version number only; no code change.
                 1.0.2  Version number only; no code change.
                 1.0.1  Version number only; no code change.

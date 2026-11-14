@@ -1,32 +1,31 @@
 --[[==========================================================================
   FILE        : skillmaster/travel.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
-                1.0.3  Begging no longer moves you when you are already within
-                       beggingRange of the NPC. Further away it walks
-                       straight to the NPC with /nav id; the fixed Skills2
-                       spot is only a fallback when the NPC is not found.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Safe Fall uses a ledge and landing spot you record
+                       (PoK no longer gives falling damage), faces the
+                       landing spot, checks you actually fell, and does not
+                       move you when already on the ledge. /nav locyxz
+                       replaces /nav locxyz; the Begging fixed spot
+                       (/nav locxy, not in the MQ2Nav reference) is gone.
+                1.0.4  Version number only; no code change.
+                1.0.3  No movement when already within beggingRange of the
+                       NPC; otherwise /nav id straight to the NPC.
                 1.0.2  Version number only; no code change.
-                1.0.1  Before each beg, Sneak is turned off (Me.Sneaking,
-                       one /doability "Sneak") and Hide / invisibility is
-                       dropped with /makemevisible. Begging handles "How can you beg from someone when
-                       they can't see you?": a chat event and Me.Invis
-                       check send /makemevisible
-                       (https://docs.macroquest.org/reference/commands/makemevisible/)
-                       and the trip stops with a reason after three tries
-                       instead of spamming the Skills tab.
-                1.0.0  First release. The Begging trip and the Safe Fall
-                       ledge of Skills2, rewritten as step by step trips that
-                       check MQ2EasyFind and MQ2Nav first, can be stopped at
-                       any step, and travel home when finished.
+                1.0.1  Sneak off and /makemevisible before each beg; the
+                       "can't see you" reply stops the trip after 3 tries.
+                1.0.0  First release: Skills2 trips rewritten step by step.
 
   WHAT  : Runs the two skills that need the character somewhere specific:
             Begging    travel to West Freeport (skipped when already there),
                        stay put if already beside Diggs, else walk straight
                        to Diggs, beg until Begging is mastered, travel back.
-            Safe Fall  travel to the Plane of Knowledge, walk to a ledge,
-                       hold forward to step off, walk back up, repeat.
+            Safe Fall  travel to the zone of the ledge you recorded, walk to
+                       the ledge (not if already on it), face the landing
+                       spot you recorded, hold forward to step off, walk
+                       back up, repeat. The old Skills2 Plane of Knowledge
+                       ledge was removed: PoK no longer gives falling
+                       damage, so Safe Fall cannot rise there.
 
   WHY   : Skills2 did both with fixed waits and no checks, so a missing
           plugin or a slow zone left the character stranded half way. Here
@@ -39,8 +38,8 @@
   HOW   : A trip is a small state machine stored in travel.trip:
             phase 'zone'   /travelto <zone> (MQ2EasyFind) until there
             phase 'spot'   Begging: nothing if within beggingRange of the NPC,
-                           else /nav id to the NPC (fixed spot only as a
-                           fallback). Safe Fall: /nav locxyz to the ledge.
+                           else /nav id to the NPC. Safe Fall: nothing if
+                           already on the recorded ledge, else /nav locyxz.
             phase 'work'   beg or fall, once per tick
             phase 'home'   /travelto <return zone> (Begging only)
             phase 'done'
@@ -56,9 +55,8 @@
   WHEN  : While a travel skill is ticked and not mastered.
 
   READING GUIDE (for future you)
-    - The West Freeport spot (132, -120) and the PoK ledge (803, -376, -96)
-      come from Skills2 and have not been checked against the current zone
-      geometry. They are editable in Options.
+    - No fixed locations remain. Begging finds the NPC by name; Safe Fall
+      uses the ledge and landing spot you record in Options.
     - Begging can anger the NPC. Diggs was Skills2's choice.
 ==========================================================================]]--
 
@@ -81,6 +79,9 @@ local travel = {}
 -- WHERE: Set in onUnseen, read and cleared in begOnce.
 travel.unseenPending = false
 travel.unseenTries   = 0
+-- True only between the Safe Fall forward press and its release, so
+-- travel.cancel sends the release only when the key is really held.
+travel.forwardHeld   = false
 local UNSEEN_MAX     = 3          -- attempts before the trip gives up
 local lastBegValue   = nil        -- Begging value when the tries were reset
 
@@ -127,6 +128,7 @@ end
 local function zoneTo(short)
     -- Already there is the usual case on a second trip.
     if inZone(short) then return true end
+    if not plugins.has('MQ2EasyFind') then return false end           -- /travelto needs MQ2EasyFind
     utils.cmd('/travelto %s', short)                                  -- MQ2EasyFind
     local ok = utils.delay(ZONE_MS, function()
         return inZone(short) and mq.TLO.Me.Zoning() ~= true           -- arrived and loaded
@@ -149,7 +151,7 @@ end
 local function navTo(cmd)
     -- No mesh means /nav would do nothing.
     if not plugins.navReady() then return false end
-    utils.cmd(cmd)                                                     -- e.g. /nav locxy 132 -120
+    utils.cmd(cmd)                                                     -- e.g. /nav locyxz 100 200 5
     utils.delay(3000, function() return mq.TLO.Navigation.Active() == true end)  -- path started
     local ok = utils.delay(NAV_MS, function() return mq.TLO.Navigation.Active() ~= true end)  -- path ended
     if not ok then utils.cmd('/nav stop') end                          -- stuck: stop walking
@@ -206,8 +208,9 @@ end
   HOW   : 1. NPC found and within beggingRange: do nothing at all.
           2. NPC found but further: /nav id <id> (MQ2Nav), wait until within
              range, /nav stop.
-          3. NPC not found: fall back to the fixed spot with /nav locxy,
-             then look again.
+          3. NPC not found in the zone: returns false (the trip stops with
+             the reason). The old fixed Skills2 spot used /nav locxy, which
+             the MQ2Nav command reference does not list, so it was removed.
   WHEN  : When the trip reaches the zone, and before a beg if out of range.
 ----------------------------------------------------------------------------]]
 local function walkToNpc()
@@ -215,13 +218,7 @@ local function walkToNpc()
     local id = findNpc()                                                 -- NPC here?
     if id and npcDistance(id) <= s.beggingRange then return true end     -- already beside: no movement
     if not plugins.navReady() then return false end                      -- cannot walk anywhere
-    if not id then                                                       -- not in view: the old spot
-        local ok = navTo(string.format('/nav locxy %s %s', s.beggingLocXY[1], s.beggingLocXY[2]))
-        if not ok then return false end                                  -- no path to the spot
-        id = findNpc()                                                   -- look again from there
-        if not id then return false end                                  -- still nowhere
-        if npcDistance(id) <= s.beggingRange then return true end        -- the spot was close enough
-    end
+    if not id then return false end                                      -- NPC not in this zone
     stats.log('Walking to %s (%d away)', s.beggingNpc, math.floor(npcDistance(id)))
     utils.cmd('/nav id %d', id)                                          -- MQ2Nav straight to the NPC
     utils.delay(NAV_MS, function() return npcDistance(id) <= s.beggingRange end)  -- until in range
@@ -269,8 +266,7 @@ local function begOnce()
         utils.delay(1500, function() return mq.TLO.Me.Invis() ~= true end)  -- give the game a moment
         return true                                                      -- beg on the next tick
     end
-    -- NPC wandered out of range: walk to it (never to the fixed spot
-    -- while it is in view). In range: no movement.
+    -- NPC wandered out of range: walk to it. In range: no movement.
     local id = findNpc()                                                 -- NPC spawn ID
     if id and npcDistance(id) > config.settings.beggingRange then
         if not walkToNpc() then return false, npc .. ' is out of range' end
@@ -288,24 +284,92 @@ local function begOnce()
 end
 
 --[[--------------------------------------------------------------------------
+  distTo(p) / ledgeCmd()
+
+  WHAT  : distTo returns your flat distance to a recorded { y, x, z } spot.
+          ledgeCmd returns the MQ2Nav command that walks to the ledge.
+  WHY   : Safe Fall must not move you when you are already on the ledge,
+          and must walk back after each fall.
+  WHERE : walkToLedge, fallOnce.
+  HOW   : Me.Y / Me.X from the spawn TLO. /nav locyxz <Y> <X> <Z> from the
+          MQ2Nav command reference
+          (https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference).
+  WHEN  : Each Safe Fall step.
+----------------------------------------------------------------------------]]
+local function distTo(p)
+    local dy = (tonumber(mq.TLO.Me.Y()) or 0) - p[1]                     -- north / south
+    local dx = (tonumber(mq.TLO.Me.X()) or 0) - p[2]                     -- east / west
+    return math.sqrt(dy * dy + dx * dx)                                  -- flat distance
+end
+
+local function ledgeCmd()  -- see doc block above
+    local l = config.settings.safeFallLedge                              -- { y, x, z }
+    return string.format('/nav locyxz %.2f %.2f %.2f', l[1], l[2], l[3])  -- MQ2Nav, y x z order
+end
+
+local LEDGE_NEAR = 3       -- this close to the ledge counts as standing on it
+local noDrops    = 0       -- falls in a row where you did not go down
+
+--[[--------------------------------------------------------------------------
+  walkToLedge()
+
+  WHAT  : Gets you onto the recorded ledge. Returns true when there.
+  WHY   : Same rule as Begging: no movement when already there.
+  WHERE : travel.tick phase 'spot', fallOnce after landing.
+  HOW   : Within LEDGE_NEAR: nothing. Else navTo(ledgeCmd()).
+  WHEN  : Before each fall.
+----------------------------------------------------------------------------]]
+local function walkToLedge()
+    if distTo(config.settings.safeFallLedge) <= LEDGE_NEAR then return true end  -- already on it
+    return navTo(ledgeCmd())                                            -- walk up to the ledge
+end
+
+--[[--------------------------------------------------------------------------
   fallOnce()
 
-  WHAT  : One step off the Safe Fall ledge and the walk back.
-  WHY   : The work phase of the Safe Fall trip.
+  WHAT  : One step off the recorded ledge and the walk back. Returns ok and
+          a reason when not ok.
+  WHY   : The work phase of the Safe Fall trip. Safe Fall only rises from a
+          fall that would hurt, so the place matters; you choose it.
   WHERE : travel.tick.
-  HOW   : Exactly the Skills2 key sequence: /nomodkey /keypress forward
-          hold, wait safeFallHoldMs, /nomodkey /keypress forward (release).
-          Then wait three seconds to land and walk back with /nav locxyz.
+  HOW   : 1. Be on the ledge (walkToLedge).
+          2. /face fast loc <y>,<x> toward the landing spot (no spaces, as
+             the /face docs require:
+             https://docs.macroquest.org/reference/commands/face/).
+          3. The Skills2 key sequence: /nomodkey /keypress forward hold,
+             wait safeFallHoldMs, /nomodkey /keypress forward (release).
+          4. Wait up to three seconds to come down (Me.Z drops by more
+             than 2). Three steps in a row with no drop stop the trip.
+          5. Walk back with walkToLedge.
   WHEN  : Each tick in the work phase.
 ----------------------------------------------------------------------------]]
 local function fallOnce()
     local s = config.settings
-    utils.cmd('/nomodkey /keypress forward hold')            -- start walking off the ledge
-    mq.delay(s.safeFallHoldMs)                               -- fixed hold, never cut short
-    utils.cmd('/nomodkey /keypress forward')                 -- release, always sent
-    utils.delay(3000)                                        -- fall and land
-    local l = s.safeFallLocXYZ                               -- ledge loc
-    return navTo(string.format('/nav locxyz %s %s %s', l[1], l[2], l[3]))  -- back up
+    if not walkToLedge() then return false, 'could not walk back to the ledge' end  -- step 1
+    local g = s.safeFallLanding                                          -- { y, x, z }
+    utils.cmd('/face fast loc %.2f,%.2f', g[1], g[2])                    -- step 2: face the drop
+    local topZ = tonumber(mq.TLO.Me.Z()) or 0                            -- height before the step
+    utils.cmd('/nomodkey /keypress forward hold')                        -- step 3: walk off
+    travel.forwardHeld = true                                            -- travel.cancel must release it
+    mq.delay(s.safeFallHoldMs)                                           -- fixed hold, never cut short
+    utils.cmd('/nomodkey /keypress forward')                             -- release, always sent
+    travel.forwardHeld = false                                           -- key is up
+    local fell = utils.delay(3000, function()                            -- step 4: came down?
+        return (tonumber(mq.TLO.Me.Z()) or topZ) < topZ - 2
+    end)
+    if fell then
+        noDrops = 0                                                      -- good step
+        stats.count('abilities')
+    else
+        noDrops = noDrops + 1                                            -- still up top
+        if noDrops >= 3 then
+            noDrops = 0                                                  -- fresh count next time
+            return false, 'stepped forward three times without falling; set the ledge and landing spot again or raise Forward hold ms'
+        end
+    end
+    utils.delay(1500)                                                    -- let the landing settle
+    if not walkToLedge() then return false, 'could not walk back to the ledge' end  -- step 5
+    return true
 end
 
 --[[--------------------------------------------------------------------------
@@ -369,19 +433,19 @@ function travel.tick(entry)
 
     if t.phase == 'zone' then
         t.status = 'travelling to ' .. zone
+        if not isBeg and not config.safeFallReady() then fail('Safe Fall ledge and landing spot are not set (Options)') return false end  -- nothing recorded: do not move
+        if not isBeg and utils.lower(zone) == 'poknowledge' then fail('no falling damage in the Plane of Knowledge; record a ledge elsewhere') return false end  -- cannot rise there
         if not plugins.has('MQ2EasyFind') and not inZone(zone) then fail('MQ2EasyFind is not loaded') return false end  -- cannot zone without the plugin
         if not zoneTo(zone) then fail('could not reach ' .. zone) return false end  -- timed out or stopped
         t.phase = 'spot'  -- next: walk to the spot
     elseif t.phase == 'spot' then  -- walk to the begging spot or ledge
         t.status = 'walking to the spot'  -- for the window
-        local cmd                                                         -- nav command for the spot
         if isBeg then
             -- Begging: no movement when already beside the NPC.
-            if not walkToNpc() then fail('could not get within range of ' .. s.beggingNpc) return false end
+            if not walkToNpc() then fail(s.beggingNpc .. ' not found in this zone or could not get within range') return false end
         else
-            local l = s.safeFallLocXYZ  -- ledge x y z
-            cmd = string.format('/nav locxyz %s %s %s', l[1], l[2], l[3])  -- MQ2Nav to a 3D loc
-            if not navTo(cmd) then fail('no nav mesh or path to the spot') return false end  -- no mesh or path
+            if not config.safeFallReady() then fail('Safe Fall ledge and landing spot are not set (Options)') return false end
+            if not walkToLedge() then fail('no nav mesh or path to the ledge') return false end  -- no movement if already there
         end
         t.phase = 'work'  -- next: beg or fall
     elseif t.phase == 'work' then  -- the actual training
@@ -395,7 +459,8 @@ function travel.tick(entry)
             if not ok then fail(why) return false end  -- NPC missing
         else
             t.status = 'stepping off the ledge'  -- for the window
-            if not fallOnce() then fail('could not walk back to the ledge') return false end  -- could not climb back
+            local ok, why = fallOnce()  -- one step off and back
+            if not ok then fail(why) return false end  -- could not climb back or no drop
         end
     elseif t.phase == 'home' then  -- Begging travels home afterwards
         t.status = 'travelling home to ' .. s.beggingReturn  -- for the window
@@ -432,7 +497,7 @@ function travel.cancel()
     if plugins.has('MQ2EasyFind') and (t.phase == 'zone' or t.phase == 'home') then
         utils.cmd('/travelto stop')                                       -- stop zone travel
     end
-    if t.key == 'safefall' then utils.cmd('/nomodkey /keypress forward') end  -- release forward just in case
+    if travel.forwardHeld then utils.cmd('/nomodkey /keypress forward') travel.forwardHeld = false end  -- release forward only if held
     travel.trip = nil  -- next tick starts fresh
     travel.unseenPending, travel.unseenTries, lastBegValue = false, 0, nil  -- fresh count next trip
 end

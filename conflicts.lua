@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/conflicts.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Safe Fall: warning when no ledge is recorded, error when
+                       the ledge is in PoK (no falling damage).
+                1.0.4  Version number only; no code change.
                 1.0.3  Version number only; no code change.
                 1.0.2  Version number only; no code change.
                 1.0.1  Notes when Begging is ticked with Hide, Sneak or Feign
@@ -217,7 +219,7 @@ local function evaluate()
     end
 
     -- Trips in two different zones.
-    if by.begging and by.safefall then
+    if by.begging and by.safefall and s.safeFallZone ~= '' and s.safeFallZone ~= s.beggingZone then  -- two zones
         add('warn', 'Mutually exclusive: Begging (%s) and Safe Fall (%s) need different zones. They will run one after the other, Begging first.',
             s.beggingZone, s.safeFallZone)
     end
@@ -276,7 +278,15 @@ local function evaluate()
         add('info', 'MQ2Nav has no mesh for this zone; trips need a mesh in the destination zone.')  -- mesh is per zone
     end
     if by.begging then add('info', 'Begging can anger the NPC. Stay ready to stop.') end  -- begging risk
-    if by.safefall then add('info', 'Safe Fall ledge location comes from Skills2 and is not verified for current Plane of Knowledge.') end  -- location not verified
+    if by.safefall and not config.safeFallReady() then  -- nothing recorded yet
+        add('warn', 'Safe Fall ledge and landing spot are not set. Stand on the edge and press Set ledge here in Options, drop, then press Set landing spot here.')
+    end
+    -- Plane of Knowledge: no falling damage since about Omens of War, so
+    -- the skill cannot rise there. Player report:
+    -- https://everquest.allakhazam.com/db/zones.html?zstrat=158
+    if by.safefall and utils.lower(s.safeFallZone) == 'poknowledge' then
+        add('error', 'Safe Fall ledge is in the Plane of Knowledge, which no longer gives falling damage, so Safe Fall will not rise. Record a ledge in another zone.')
+    end
     if s.combatTargetSource == 'merc' and combatCount > 0 then  -- Skills2 merc method
         add('info', 'Mercenary as combat target is the Skills2 method; whether abilities land on your own mercenary is not verified.')  -- not verified
     end

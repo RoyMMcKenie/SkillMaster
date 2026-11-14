@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/catalog.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Safe Fall notes and needs: recorded ledge, not PoK.
+                1.0.4  Version number only; no code change.
                 1.0.3  Version number only; no code change.
                 1.0.2  Tracking note: pressed whenever ready, window state
                        does not matter.
@@ -203,8 +204,8 @@ catalog.SKILLS = {
     { key = 'begging',     name = 'Begging',      group = 'travel', method = 'travel', needs = { 'nav', 'easyfind' },
       notes = 'Travels to West Freeport and begs Diggs, as Skills2 did. Begging can anger the NPC.' },
     -- 'safefall': in game skill 'Safe Fall', trained by method 'travel'.
-    { key = 'safefall',    name = 'Safe Fall',    group = 'travel', method = 'travel', needs = { 'nav', 'easyfind' },
-      notes = 'Steps off a Plane of Knowledge ledge repeatedly, as Skills2 did. Location not verified for current PoK.' },
+    { key = 'safefall',    name = 'Safe Fall',    group = 'travel', method = 'travel', needs = { 'nav', 'ledge' },
+      notes = 'Steps off a ledge you record in Options, walks back, repeats. Not the Plane of Knowledge: PoK no longer gives falling damage. Needs MQ2EasyFind only when the ledge is in another zone.' },
 
     -- Passive. Nothing to press; rises from something else the run does.
     -- 'meditate': in game skill 'Meditate', trained by method 'passive'.

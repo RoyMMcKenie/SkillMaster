@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/plugins.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Command list: /nav locyxz; /nav locxy removed.
+                1.0.4  Version number only; no code change.
                 1.0.3  Version number only; no code change.
                 1.0.2  Version number only; no code change.
                 1.0.1  Version number only; no code change.
@@ -35,8 +36,8 @@
     Commands each plugin provides, all from their published docs:
       MQ2Cast       /casting "Spell|gemN" -maxtries|N -targetid|ID, /interrupt
                     https://docs.macroquest.org/plugins/community-plugins/mq2cast/
-      MQ2Nav        /nav target, /nav id N, /nav locxyz X Y Z, /nav locxy X Y,
-                    /nav stop
+      MQ2Nav        /nav target, /nav id N, /nav locyxz Y X Z, /nav stop
+                    (/nav locxy is not in the reference and is not used)
                     https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference
       MQ2EasyFind   /travelto <zone>, /travelto stop
                     https://www.redguides.com/docs/projects/mq2easyfind/cmd-travelto/

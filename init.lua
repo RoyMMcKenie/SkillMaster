@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/init.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  /skm end and the End SkillMaster button: tidy
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Version number only; no code change.
+                1.0.4  /skm end and the End SkillMaster button: tidy
                        shutdown, then /lua stop skillmaster.
                 1.0.3  Version 1.0.3.
                 1.0.2  Version 1.0.2.
@@ -56,7 +57,7 @@ local travel  = require('skillmaster.travel')   -- begging chat event
 -- WHERE: startup message.
 -- HOW  : Must match CHANGELOG.md.
 -- WHEN : Once.
-local VERSION = '1.0.4'
+local VERSION = '1.0.5'
 
 --- Script name -----------------------------------------------------------------------
 -- WHAT : The name MacroQuest knows this script by: the folder name used in

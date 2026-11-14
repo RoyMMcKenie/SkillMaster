@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/ARCHITECTURE.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.4
+  VERSION : 1.0.5
   WHAT    : How the package is built: module map, data flow, the run loop,
             the documentation standard, settings, and every game / plugin
             command it sends with where it was checked.
@@ -78,9 +78,9 @@ Enforced by `dev/doc_audit.py`, which must PASS before a release:
 | destroySummoned | true | destroy NoRent items produced by a training cast |
 | combatTargetSource | 'target' | 'target' or 'merc' (unverified) |
 | meleeRange | 12 | navigate closer than this |
-| beggingZone / beggingNpc / beggingLocXY / beggingReturn | freeportwest / Diggs / 132,-120 / blank | Begging trip (from Skills2); the loc is only a fallback when the NPC is not found; a blank return zone stays put |
+| beggingZone / beggingNpc / beggingReturn | freeportwest / Diggs / blank | Begging trip (from Skills2); the NPC is found by name; a blank return zone stays put |
 | beggingRange | 15 | within this distance of the NPC you are not moved |
-| safeFallZone / safeFallLocXYZ / safeFallHoldMs | poknowledge / 803,-376,-96 / 1200 | Safe Fall trip (from Skills2) |
+| safeFallZone / safeFallLedge / safeFallLanding / safeFallHoldMs | blank / {} / {} / 1200 | Safe Fall trip; zone and {y, x, z} spots recorded with the Options buttons; PoK refused (no fall damage) |
 | stopWhenDone / beepWhenDone | true / true | finish behaviour |
 | blockOnErrors | true | red warnings block Start |
 | debug | false | trace every command in chat |
@@ -103,7 +103,8 @@ Every command goes through `utils.cmd`. Nothing outside this list is sent.
 | `/lua stop skillmaster` | init (End SkillMaster button, `/skm end`), sent after the tidy shutdown | [MacroQuest Lua docs](https://docs.macroquest.org/lua/) |
 | `/beep` | runner | [MacroQuest /beep](https://docs.macroquest.org/reference/commands/beep/) |
 | `/nomodkey /keypress forward hold` and `/nomodkey /keypress forward` | travel | [MacroQuest /keypress](https://docs.macroquest.org/reference/commands/keypress/), [/nomodkey](https://docs.macroquest.org/reference/commands/nomodkey/) |
-| `/nav id <id>`, `/nav locxy`, `/nav locxyz`, `/nav stop` | abilities, travel, runner | [MQ2Nav command reference](https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference) |
+| `/nav id <id>`, `/nav locyxz <Y> <X> <Z>`, `/nav stop` | abilities, travel, runner | [MQ2Nav command reference](https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference) |
+| `/face fast loc <y>,<x>` | travel (Safe Fall) | [/face](https://docs.macroquest.org/reference/commands/face/) |
 | `/travelto <zone>`, `/travelto stop` | travel | [MQ2EasyFind /travelto](https://www.redguides.com/docs/projects/mq2easyfind/cmd-travelto/) |
 | `/startforage`, `/stopforage` | abilities | [MQ2AutoForage docs](https://docs.macroquest.org/plugins/community-plugins/mq2autoforage/) |
 | `/rgl pause`, `/rgl unpause` | plugins | [RedGuides RGMercs thread](https://www.redguides.com/community/threads/anniversary-tower-missions-full-automation.92165/) |
@@ -112,7 +113,7 @@ TLO members and ImGui calls were checked against [mq-definitions](https://github
 
 ## Testing
 
-- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, never the fixed spot), endbutton (runs init.lua, presses End SkillMaster: gems restored and settings saved before `/lua stop skillmaster`). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
+- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, no fixed spot), endbutton (runs init.lua, presses End SkillMaster: gems restored and settings saved before `/lua stop skillmaster`), fall (on the recorded ledge: no walk before the first step, faces the landing spot, walks back with /nav locyxz), fallunset (nothing recorded: no movement), fallpok (ledge in PoK: refused). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
 - `dev/doc_audit.py`: documentation standard.
 
 <!--

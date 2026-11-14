@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/abilities.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  New 'ledge' requirement: Safe Fall waits until the ledge
+                       and landing spot are recorded.
+                1.0.4  Version number only; no code change.
                 1.0.3  Version number only; no code change.
                 1.0.2  Tracking is pressed whenever it is ready and no
                        longer waits for or closes the Tracking window.
@@ -186,6 +188,9 @@ function abilities.requirement(entry)
         if need == 'freeSlot' and (tonumber(mq.TLO.Me.FreeInventory()) or 0) == 0 then return 'bags are full' end  -- no room for a foraged or caught item
         if need == 'nav' and not plugins.has('MQ2Nav') then return 'needs MQ2Nav' end  -- trips walk with MQ2Nav
         if need == 'easyfind' and not plugins.has('MQ2EasyFind') then return 'needs MQ2EasyFind' end  -- trips zone with MQ2EasyFind
+        if need == 'ledge' and not config.safeFallReady() then  -- Safe Fall spot not recorded
+            return 'ledge not set: stand on a ledge and press Set ledge here in Options'
+        end
         if need == 'npcTarget' then  -- combat skills need something to hit
             local id, why = abilities.combatTarget()                           -- someone to hit?
             if not id then return why end

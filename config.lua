@@ -1,8 +1,12 @@
 --[[==========================================================================
   FILE        : skillmaster/config.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  Version number only; no code change.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Safe Fall: the Skills2 Plane of Knowledge ledge is
+                       gone (no fall damage in PoK). New safeFallLedge and
+                       safeFallLanding recorded from Options. Old
+                       safeFallLocXYZ and beggingLocXY are removed on load.
+                1.0.4  Version number only; no code change.
                 1.0.3  New setting beggingRange (default 15): already this
                        close to the Begging NPC means no movement.
                        beggingReturn now defaults to blank (stay put).
@@ -113,15 +117,19 @@ config.DEFAULTS = {
     beggingZone   = 'freeportwest',
     beggingNpc    = 'Diggs',
     -- Already this close to the NPC: do not move at all. Further away but
-    -- in the zone: walk straight to the NPC (/nav id), not to the fixed spot.
+    -- in the zone: walk straight to the NPC (/nav id).
     beggingRange  = 15,
-    beggingLocXY  = { 132, -120 },     -- /nav locxy X Y used by Skills2
     beggingReturn = '',                -- zone to travel to when done; blank stays put
 
-    -- Safe Fall trip, from Skills2: a ledge in the Plane of Knowledge.
-    safeFallZone   = 'poknowledge',
-    safeFallLocXYZ = { 803, -376, -96 }, -- /nav locxyz X Y Z used by Skills2
-    safeFallHoldMs = 1200,               -- how long to hold forward to step off
+    -- Safe Fall trip. Recorded by you in Options: stand on the edge and
+    -- press Set ledge here, drop, press Set landing spot here. Each is
+    -- { y, x, z } from Me.Y, Me.X, Me.Z. Empty means not set; the trip
+    -- will not run until both are set. The Skills2 Plane of Knowledge
+    -- ledge was removed: PoK no longer gives falling damage.
+    safeFallZone    = '',               -- zone short name the ledge is in
+    safeFallLedge   = {},               -- { y, x, z } where you step off
+    safeFallLanding = {},               -- { y, x, z } where you land
+    safeFallHoldMs  = 1200,             -- how long to hold forward to step off
 
     -- Stop the run when every ticked skill is mastered, and beep.
     stopWhenDone = true,
@@ -229,6 +237,18 @@ function config.load()
     s.beggingRange   = utils.clamp(s.beggingRange, 5, 50)    -- begging distance
     s.safeFallHoldMs = utils.clamp(s.safeFallHoldMs, 200, 5000)  -- hold long enough to step off, never stuck
 
+    -- Settings files from 1.0.4 and earlier carry the Skills2 PoK ledge
+    -- (safeFallZone poknowledge, safeFallLocXYZ) and the Begging spot
+    -- (beggingLocXY). Drop them; PoK no longer gives falling damage and
+    -- the Begging spot used an undocumented /nav form.
+    if s.safeFallLocXYZ ~= nil then
+        s.safeFallLocXYZ = nil                                          -- old key
+        if s.safeFallZone == 'poknowledge' then s.safeFallZone = '' end -- old default zone
+    end
+    s.beggingLocXY = nil                                                -- old key
+    if type(s.safeFallLedge) ~= 'table' then s.safeFallLedge = {} end   -- always a table
+    if type(s.safeFallLanding) ~= 'table' then s.safeFallLanding = {} end  -- always a table
+
     -- Hand utils a getter for the debug flag (avoids a circular require).
     utils.bindDebugFlag(function() return config.settings.debug == true end)
     utils.debug('Settings loaded from %s', config.path)  -- trace the file used
@@ -267,6 +287,20 @@ function config.setSelected(key, on)  -- see doc block above
     config.settings.selected[key] = on and true or nil  -- nil removes the entry
 end
 
+--[[--------------------------------------------------------------------------
+  config.safeFallReady()
+
+  WHAT  : True when the Safe Fall zone, ledge and landing spot are recorded.
+  WHY   : The trip, the Train tab and the warnings all need the same test.
+  WHERE : abilities.requirement ('ledge' tag), conflicts.lua, ui.lua.
+  HOW   : Zone set and both tables hold three numbers.
+  WHEN  : On demand.
+----------------------------------------------------------------------------]]
+function config.safeFallReady()
+    local s = config.settings
+    return s.safeFallZone ~= '' and #s.safeFallLedge == 3 and #s.safeFallLanding == 3  -- all recorded
+end
+
 return config  -- hand the module table to whoever requires it
 
 --[[==========================================================================
@@ -274,7 +308,7 @@ return config  -- hand the module table to whoever requires it
 
   PUBLIC
     DEFAULTS, settings, path
-    load(), save(), isSelected(key), setSelected(key, on)
+    load(), save(), isSelected(key), setSelected(key, on), safeFallReady()
 
   DEPENDENCIES : mq, skillmaster.utils
 

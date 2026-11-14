@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/ui.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.4
-  CHANGES     : 1.0.4  End SkillMaster button in the header, next to Stop.
+  VERSION     : 1.0.5
+  CHANGES     : 1.0.5  Options, Trips: Set ledge here, Set landing spot here and
+                       Clear spots for Safe Fall (drawSafeFallSpots).
+                1.0.4  End SkillMaster button in the header, next to Stop.
                 1.0.3  Options: Begging range box.
                 1.0.2  Version number only; no code change.
                 1.0.1  Version number only; no code change.
@@ -571,10 +573,8 @@ function ui.drawOptions()
     textBox('Begging NPC', 'beggingNpc')  -- NPC to beg
     intBox('Begging range', 'beggingRange', 5, 50, 'Already this close to the NPC: you are not moved. Further away: you walk straight to the NPC.')  -- no move inside this
     textBox('Return zone', 'beggingReturn', 'Blank stays in the begging zone.')  -- travel home afterwards
-    textBox('Safe Fall zone', 'safeFallZone')  -- Safe Fall destination
+    ui.drawSafeFallSpots()  -- record the ledge and landing spot
     intBox('Forward hold ms', 'safeFallHoldMs', 200, 5000, 'How long forward is held to step off the ledge.')  -- forward hold time
-    colored(C.info, string.format('Begging spot %s, %s   Ledge %s, %s, %s (edit in the settings file)',  -- locations for reference
-        s.beggingLocXY[1], s.beggingLocXY[2], s.safeFallLocXYZ[1], s.safeFallLocXYZ[2], s.safeFallLocXYZ[3]))  -- format arguments
 
     ImGui.SeparatorText('Safety and finish')  -- safety options
     intBox('Stop below health %', 'stopHpPct', 0, 95)  -- health stop
@@ -584,6 +584,65 @@ function ui.drawOptions()
     checkbox('Beep when everything is mastered', 'beepWhenDone')  -- audible finish
     checkbox('Debug trace in chat', 'debug', 'Shows every command sent.')  -- trace every command
     colored(C.info, 'Settings file: ' .. tostring(config.path))  -- where settings live
+end
+
+--[[--------------------------------------------------------------------------
+  ui.drawSafeFallSpots()
+
+  WHAT  : Shows the recorded Safe Fall ledge and landing spot, with buttons
+          to record them where you stand and to clear them.
+  WHY   : The Skills2 Plane of Knowledge ledge no longer works (no falling
+          damage in PoK), and a ledge that hurts differs per character and
+          level, so you pick it yourself.
+  WHERE : ui.drawOptions, Trips section.
+  HOW   : Set ledge here stores Zone.ShortName and { Me.Y, Me.X, Me.Z }.
+          Set landing spot here stores { Me.Y, Me.X, Me.Z } and must be in
+          the same zone. Clear empties all three. Buttons are disabled
+          (hidden) while a run is active so the trip is not changed mid way.
+  WHEN  : Every frame while the Options tab is open.
+----------------------------------------------------------------------------]]
+function ui.drawSafeFallSpots()
+    local s = config.settings
+    local function here()  -- your position as { y, x, z }
+        return { tonumber(mq.TLO.Me.Y()) or 0, tonumber(mq.TLO.Me.X()) or 0, tonumber(mq.TLO.Me.Z()) or 0 }
+    end
+    local function show(p)  -- '{y, x, z}' or 'not set'
+        if #p ~= 3 then return 'not set' end
+        return string.format('%.1f, %.1f, %.1f', p[1], p[2], p[3])  -- y, x, z
+    end
+    colored(C.info, string.format('Safe Fall zone: %s', s.safeFallZone ~= '' and s.safeFallZone or 'not set'))  -- zone
+    colored(C.info, 'Ledge (y, x, z): ' .. show(s.safeFallLedge))  -- step off point
+    colored(C.info, 'Landing (y, x, z): ' .. show(s.safeFallLanding))  -- bottom
+    if runner.state ~= 'idle' then  -- do not move the spot mid run
+        colored(C.info, 'Stop the run to change the Safe Fall spots.')  -- why no buttons
+        return  -- nothing else while running
+    end
+    local zone = utils.lower(mq.TLO.Zone.ShortName() or '')  -- current zone
+    if ImGui.Button('Set ledge here') then  -- stand on the very edge
+        s.safeFallZone = zone  -- zone of the ledge
+        s.safeFallLedge = here()  -- where you step off
+        s.safeFallLanding = {}  -- a new ledge needs a new landing spot
+        markDirty()  -- save soon
+    end
+    tooltip('Stand on the very edge, facing the drop. The fall must hurt: no damage means no skill.')  -- how to use
+    ImGui.SameLine()  -- buttons on one row
+    if ImGui.Button('Set landing spot here') then  -- after dropping
+        if #s.safeFallLedge ~= 3 or zone ~= s.safeFallZone then  -- wrong order or zone
+            utils.warn('Set the ledge first, in the same zone, then drop and set the landing spot.')  -- tell the player
+        else
+            s.safeFallLanding = here()  -- where you came down
+            markDirty()  -- save soon
+        end
+    end
+    tooltip('After stepping off, stand where you landed. SkillMaster faces this spot before each step.')  -- how to use
+    ImGui.SameLine()  -- same row
+    if ImGui.Button('Clear spots') then  -- start over
+        s.safeFallZone, s.safeFallLedge, s.safeFallLanding = '', {}, {}  -- all three empty
+        markDirty()  -- save soon
+    end
+    if zone == 'poknowledge' then  -- PoK gives no falling damage
+        colored(C.warn, 'The Plane of Knowledge gives no falling damage; Safe Fall will not rise here.')  -- warn before recording
+    end
 end
 
 --[[--------------------------------------------------------------------------
@@ -671,7 +730,7 @@ return ui  -- hand the module table to whoever requires it
   PUBLIC
     open, flush(force), render(), markDirty()
     drawTrain(), drawSpells(), drawAllSkills(), drawSession(),
-    drawOptions(), drawHelp()
+    drawOptions(), drawSafeFallSpots(), drawHelp()
 
   DEPENDENCIES : mq, ImGui, skillmaster.utils, config, catalog, skills,
                  plugins, spells, abilities, travel, conflicts, runner, stats

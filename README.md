@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/README.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.4
+  VERSION : 1.0.5
   WHAT    : What SkillMaster does, how to install it, how to use the window
             and commands, and what has not been verified in game yet.
   WHY     : First thing to read before running or editing the package.
@@ -9,7 +9,7 @@
             covers versions.
   WHEN    : Read before first use; update when behaviour or commands change.
 -->
-# SkillMaster 1.0.4
+# SkillMaster 1.0.5
 
 SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window. It merges the two earlier scripts, Skills2 0.4.2 (Blasty) and skillup.lua 1.1, into one modular, fully documented package.
 
@@ -83,13 +83,23 @@ Tabs:
 - Temporary summoned items are destroyed only when they are NoRent and appeared right after a training cast; anything else goes to bags with `/autoinventory`.
 - Each skill stops at its cap; the run stops and beeps when every ticked skill is mastered. A run with only Meditate left stops with an explanation, because Meditate only rises while mana is coming back.
 
+## Safe Fall setup
+
+The Plane of Knowledge no longer gives falling damage ([Allakhazam PoK comments](https://everquest.allakhazam.com/db/zones.html?zstrat=158)), and Safe Fall only rises from a fall that hurts, so you pick the ledge:
+
+1. Go to a ledge that hurts when you drop. Stand on the very edge and press Options, Trips, Set ledge here.
+2. Step off, stand where you landed and press Set landing spot here.
+3. Tick Safe Fall and press Start. If you are already on the ledge you are not moved; otherwise MQ2Nav walks you there (and MQ2EasyFind takes you to the zone first if needed).
+
+Ideas from players, not automated: the balcony above the Erudin zone in ([Allakhazam Monk guide](https://everquest.allakhazam.com/wiki/EQ:Monk)), the Gyrospire Relocation Device tower ([EverQuest forums](https://forums.everquest.com/index.php?threads/safe-fall-training.252721/)), and steep zone walls or wizard spires ([The Safehouse Rogue FAQ](https://thesafehouse.org/forums/forum/everquest-wing/library-read-only/2981-the-rogue-faq)). Keep your health up; the trip waits to heal between falls.
+
 ## Not verified in game yet
 
 These came from the original scripts or from documentation and need a live check with Debug on:
 
 - Using your own mercenary as the combat target (Skills2's method). Off by default.
 - Bind Wound at full health, and Fishing behaviour.
-- Safe Fall ledge in the Plane of Knowledge at 803, -376, -96 and the Begging spot in West Freeport at 132, -120 (both from Skills2).
+- Whether Forward hold ms (1200) is right for every ledge; raise it if you stop short of the edge.
 - Mesmerize as the enchanter default school spell.
 - Hide and Sneak toggled with a double press.
 
@@ -97,7 +107,7 @@ These came from the original scripts or from documentation and need a live check
 
 ```
 pip install lupa
-python dev/smoke_test.py     # fake MacroQuest, twelve scenarios, every tab drawn
+python dev/smoke_test.py     # fake MacroQuest, fifteen scenarios, every tab drawn
 python dev/doc_audit.py      # documentation standard
 ```
 

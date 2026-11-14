@@ -6,6 +6,16 @@
 -->
 # SkillMaster changelog
 
+## 1.0.5 (2026-11-14)
+
+- Safe Fall no longer uses the Skills2 Plane of Knowledge ledge. Players report that PoK has given no falling damage since around Omens of War ([Allakhazam PoK comments](https://everquest.allakhazam.com/db/zones.html?zstrat=158)), so the skill cannot rise there.
+- Options, Trips: Set ledge here (stand on the edge), Set landing spot here (after dropping) and Clear spots. Each records the zone and your Y, X, Z.
+- The trip does not move you when you are already on the ledge. It faces the landing spot with [`/face fast loc y,x`](https://docs.macroquest.org/reference/commands/face/), holds forward, checks you actually came down (three steps without a drop stop the trip), then walks back with `/nav locyxz` ([MQ2Nav command reference](https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference)).
+- Safe Fall with nothing recorded: yellow warning and no movement. Ledge recorded in PoK: red warning, Start refused.
+- Removed `/nav locxy` (the old Begging fixed spot); it is not in the MQ2Nav command reference. If Diggs is not in the zone the trip stops with that reason. Old saved settings (PoK ledge, Begging spot) are cleared on load.
+- Forward key release on Stop is only sent when forward is actually held.
+- Smoke test: fall, fallunset, fallpok scenarios.
+
 ## 1.0.4 (2026-11-14)
 
 - End SkillMaster button in the window header (and `/skm end`). It stops any run, restores your gems, unpauses RGMercs and saves settings, then sends [`/lua stop skillmaster`](https://docs.macroquest.org/lua/).
