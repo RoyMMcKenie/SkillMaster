@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/plugins.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. New module; neither source script
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. New module; neither source script
                        checked which plugins were loaded.
 
   WHAT  : Answers "is this plugin or script available right now" for every

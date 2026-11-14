@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/utils.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. Combines the best parts of Skills2 0.4.2
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. Combines the best parts of Skills2 0.4.2
                        (Blasty) and skillup.lua 1.1 into one package.
 
   WHAT  : Low level helpers shared by every other module: prefixed chat

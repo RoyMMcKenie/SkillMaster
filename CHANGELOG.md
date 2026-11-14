@@ -6,6 +6,16 @@
 -->
 # SkillMaster changelog
 
+## 1.0.1 (2026-11-14)
+
+Fixes the Begging spam "How can you beg from someone when they can't see you?".
+
+- Before each beg the trip turns Sneak off (one Sneak press when Me.Sneaking is true) and drops Hide or invisibility with [/makemevisible](https://docs.macroquest.org/reference/commands/makemevisible/).
+- A chat event catches that reply; after three /makemevisible attempts without a Begging gain the trip stops with the reason, and the run stops when nothing else is left.
+- Hide, Sneak and Feign Death are no longer trained at the Begging spot; they are trained after the trip.
+- New note in the warning panel when Begging is ticked with Hide, Sneak or Feign Death, or while unseen.
+- Smoke test: two Begging scenarios.
+
 ## 1.0.0 (2026-11-14)
 
 First release. Merges Skills2 0.4.2 (Blasty) and skillup.lua 1.1 into one modular package.

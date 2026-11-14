@@ -1,8 +1,16 @@
 --[[==========================================================================
   FILE        : skillmaster/travel.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. The Begging trip and the Safe Fall
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Before each beg, Sneak is turned off (Me.Sneaking,
+                       one /doability "Sneak") and Hide / invisibility is
+                       dropped with /makemevisible. Begging handles "How can you beg from someone when
+                       they can't see you?": a chat event and Me.Invis
+                       check send /makemevisible
+                       (https://docs.macroquest.org/reference/commands/makemevisible/)
+                       and the trip stops with a reason after three tries
+                       instead of spamming the Skills tab.
+                1.0.0  First release. The Begging trip and the Safe Fall
                        ledge of Skills2, rewritten as step by step trips that
                        check MQ2EasyFind and MQ2Nav first, can be stopped at
                        any step, and travel home when finished.
@@ -34,7 +42,7 @@
           /nav (https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference),
           /keypress forward hold
           (https://docs.macroquest.org/reference/commands/keypress/),
-          /nomodkey, /doability.
+          /nomodkey, /doability, /makemevisible.
 
   WHEN  : While a travel skill is ticked and not mastered.
 
@@ -53,6 +61,19 @@ local skills  = require('skillmaster.skills')   -- abilityReady, mastered
 local stats   = require('skillmaster.stats')    -- log, count
 
 local travel = {}
+
+--- Unseen begging -----------------------------------------------------------------
+-- WHAT : unseenPending is set by the chat event when EverQuest answers a beg
+--        with "How can you beg from someone when they can't see you?".
+--        unseenTries counts /makemevisible attempts since Begging last rose.
+-- WHY  : That line means the NPC cannot see you (invisible or hidden, often
+--        from Hide being trained at the spot). Without handling it the trip
+--        keeps begging and spams the Skills chat tab, as seen in 1.0.0.
+-- WHERE: Set in onUnseen, read and cleared in begOnce.
+travel.unseenPending = false
+travel.unseenTries   = 0
+local UNSEEN_MAX     = 3          -- attempts before the trip gives up
+local lastBegValue   = nil        -- Begging value when the tries were reset
 
 --- Current trip -------------------------------------------------------------------
 -- WHAT : { key, phase, status, started } for the trip in progress, or nil.
@@ -148,12 +169,40 @@ end
   WHAT  : One Begging attempt on the configured NPC.
   WHY   : The work phase of the Begging trip.
   WHERE : travel.tick.
-  HOW   : Target with /mqtarget npc <name> if not targeted, then
+  HOW   : Turn Sneak off if sneaking, drop Hide or invisibility with
+          /makemevisible (also when the game said the NPC cannot see you),
+          target with /mqtarget npc <name> if not targeted, then
           /doability Begging when ready.
   WHEN  : Each tick in the work phase.
 ----------------------------------------------------------------------------]]
 local function begOnce()
     local npc = config.settings.beggingNpc                               -- e.g. Diggs
+    -- Begging went up since the last reset: you are being seen again.
+    local cur = tonumber(mq.TLO.Me.Skill('Begging')()) or 0              -- current Begging
+    if lastBegValue == nil or cur > lastBegValue then travel.unseenTries, lastBegValue = 0, cur end
+    -- Sneaking: press Sneak once to turn it off (Sneak is a toggle), so the
+    -- NPC is begged from a normal, visible stance. Me.Sneaking is the
+    -- documented spawn member.
+    if mq.TLO.Me.Sneaking() == true then
+        utils.cmd('/doability "Sneak"')                                  -- toggle Sneak off
+        stats.log('Begging: turned Sneak off first')
+        utils.delay(1500, function() return mq.TLO.Me.Sneaking() ~= true end)  -- wait for it to drop
+        if mq.TLO.Me.Sneaking() == true then return false, 'could not turn Sneak off before begging' end
+        return true                                                      -- beg on the next tick
+    end
+    -- Invisible or hidden (Me.Invis, any type), or the game just said the
+    -- NPC cannot see you: become visible before the next beg.
+    if mq.TLO.Me.Invis() == true or travel.unseenPending then
+        travel.unseenPending = false                                     -- handled now
+        travel.unseenTries = travel.unseenTries + 1                      -- count the attempt
+        if travel.unseenTries > UNSEEN_MAX then                          -- it keeps happening
+            return false, npc .. ' cannot see you (invisible or hidden) even after /makemevisible'
+        end
+        utils.cmd('/makemevisible')                                      -- MacroQuest: drop invis / hide
+        stats.log('Begging: %s could not see you, sent /makemevisible (%d/%d)', npc, travel.unseenTries, UNSEEN_MAX)
+        utils.delay(1500, function() return mq.TLO.Me.Invis() ~= true end)  -- give the game a moment
+        return true                                                      -- beg on the next tick
+    end
     if utils.lower(mq.TLO.Target.CleanName()) ~= utils.lower(npc) then
         utils.cmd('/mqtarget npc %s', npc)                               -- spawn search
         if not utils.delay(1500, function() return mq.TLO.Target.ID() ~= nil end) then
@@ -185,6 +234,42 @@ local function fallOnce()
     utils.delay(3000)                                        -- fall and land
     local l = s.safeFallLocXYZ                               -- ledge loc
     return navTo(string.format('/nav locxyz %s %s %s', l[1], l[2], l[3]))  -- back up
+end
+
+--[[--------------------------------------------------------------------------
+  onUnseen()
+
+  WHAT  : Chat event handler for the "can't see you" begging reply.
+  WHY   : Lets begOnce react to the game's own answer instead of begging
+          again blind.
+  WHERE : Registered by travel.init.
+  HOW   : Sets travel.unseenPending, but only while a Begging trip is in
+          its work phase, so the line from manual begging is ignored.
+  WHEN  : When the line appears in chat (mq.doevents in the main loop).
+----------------------------------------------------------------------------]]
+local function onUnseen()
+    if travel.trip and travel.trip.key == 'begging' and travel.trip.phase == 'work' then
+        travel.unseenPending = true                                      -- begOnce handles it
+    end
+end
+
+--[[--------------------------------------------------------------------------
+  travel.init() / travel.shutdown()
+
+  WHAT  : Register and remove the "can't see you" chat event.
+  WHY   : Events must be removed when the script ends.
+  WHERE : init.lua startup and shutdown.
+  HOW   : mq.event with #*# wildcards around the fixed words, so the
+          apostrophe style in "can't" does not matter. Line seen in game:
+          "How can you beg from someone when they can't see you?"
+  WHEN  : Once at startup, once at shutdown.
+----------------------------------------------------------------------------]]
+function travel.init()
+    mq.event('skm_begunseen', '#*#beg from someone when they can#*#see you#*#', onUnseen)  -- game line
+end
+
+function travel.shutdown()  -- see doc block above
+    mq.unevent('skm_begunseen')  -- same name as in travel.init
 end
 
 --[[--------------------------------------------------------------------------
@@ -270,6 +355,7 @@ function travel.cancel()
     if plugins.has('MQ2EasyFind') then utils.cmd('/travelto stop') end    -- stop zone travel
     utils.cmd('/nomodkey /keypress forward')                              -- release forward just in case
     travel.trip = nil  -- next tick starts fresh
+    travel.unseenPending, travel.unseenTries, lastBegValue = false, 0, nil  -- fresh count next trip
 end
 
 --[[--------------------------------------------------------------------------
@@ -291,13 +377,16 @@ return travel  -- hand the module table to whoever requires it
   END OF FILE : skillmaster/travel.lua
 
   PUBLIC
-    trip, tick(entry), cancel(), failed(key)
+    trip, unseenPending, unseenTries, init(), shutdown(), tick(entry),
+    cancel(), failed(key)
 
   DEPENDENCIES : mq, skillmaster.utils, config, plugins, skills, stats
 
   HOW TO EDIT SAFELY
     - Always pair /keypress forward hold with the release line; fallOnce
       uses mq.delay for the hold so Stop cannot skip the release.
+    - The unseen event pattern uses #*# around "can" and "see you" on
+      purpose; do not type the apostrophe into the pattern.
     - Keep failed trips in travel.trip (phase 'failed') so the window can
       show why; runner.stop clears it.
 ==========================================================================]]--

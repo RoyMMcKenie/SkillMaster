@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/init.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. One entry point and one /skm command
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Registers and removes the Begging "can't see you"
+                       event (travel.init / travel.shutdown).
+                1.0.0  First release. One entry point and one /skm command
                        replace the seven binds of Skills2 (/SPA /SAA /SS
                        /SBEG /SSAFE /SDA /StopS) and the start-and-go loop of
                        skillup.lua.
@@ -41,6 +43,7 @@ local skills  = require('skillmaster.skills')   -- values for /skm status
 local stats   = require('skillmaster.stats')    -- event, session
 local runner  = require('skillmaster.runner')   -- the run
 local ui      = require('skillmaster.ui')       -- the window
+local travel  = require('skillmaster.travel')   -- begging chat event
 
 --- Version ---------------------------------------------------------------------------
 -- WHAT : Package version shown at start.
@@ -48,7 +51,7 @@ local ui      = require('skillmaster.ui')       -- the window
 -- WHERE: startup message.
 -- HOW  : Must match CHANGELOG.md.
 -- WHEN : Once.
-local VERSION = '1.0.0'
+local VERSION = '1.0.1'
 
 --[[--------------------------------------------------------------------------
   printHelp()
@@ -138,6 +141,7 @@ end
 local function startup()  -- load settings, register command and window
     config.load()                                     -- per character settings
     stats.init()                                      -- session and skill up event
+    travel.init()                                     -- begging "can't see you" event
     ui.open = config.settings.windowOpen ~= false     -- remember hidden window
     mq.bind('/skm', onCommand)                        -- register the command
     mq.imgui.init('SkillMaster', ui.render)           -- register the window
@@ -160,6 +164,7 @@ local function shutdown()
     ui.flush(true)
     config.save()
     stats.shutdown()                                  -- remove the event
+    travel.shutdown()                                 -- remove the begging event
     mq.unbind('/skm')                                 -- remove the command
     utils.echo('SkillMaster closed.')
 end

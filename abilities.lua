@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/abilities.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. Brings together the ability handling of
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. Brings together the ability handling of
                        Skills2 (Sneak and Hide pressed twice, Feign Death then
                        stand, Tracking then close the window, mercenary as a
                        combat target, Bash only with a shield) and adds

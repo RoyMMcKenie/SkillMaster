@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/config.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. Replaces the Skills2.ini file and the
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. Replaces the Skills2.ini file and the
                        hard coded tables of skillup.lua with one saved
                        settings file per character.
 

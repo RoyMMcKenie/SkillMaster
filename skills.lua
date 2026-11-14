@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/skills.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. Replaces the class and race tables of
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. Replaces the class and race tables of
                        skillup.lua with live checks of the character's own
                        skill caps, so any class, race and level works.
 

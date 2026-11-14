@@ -2,8 +2,9 @@
 =============================================================================
   FILE        : skillmaster/dev/doc_audit.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First version, adapted from the ClericFood audit.
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only.
+                1.0.0  First version, adapted from the ClericFood audit.
 
   WHAT  : Checks that every Lua file in the package meets the documentation
           standard described in ARCHITECTURE.md, and prints anything that

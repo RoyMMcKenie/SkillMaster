@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/conflicts.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. New module; neither source script
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Notes when Begging is ticked with Hide, Sneak or Feign
+                       Death, or while invisible.
+                1.0.0  First release. New module; neither source script
                        warned about anything.
 
   WHAT  : Looks at the ticked skills, the character and the loaded plugins,
@@ -215,6 +217,12 @@ local function evaluate()
     if by.begging and by.safefall then
         add('warn', 'Mutually exclusive: Begging (%s) and Safe Fall (%s) need different zones. They will run one after the other, Begging first.',
             s.beggingZone, s.safeFallZone)
+    end
+    if by.begging and (by.hide or by.sneak or by.feign) then  -- would make the NPC unable to see you
+        add('info', 'Hide, Sneak and Feign Death are skipped while begging: the NPC must be able to see you.')  -- explain the skip
+    end
+    if by.begging and (mq.TLO.Me.Invis() == true or mq.TLO.Me.Sneaking() == true) then  -- unseen right now
+        add('info', 'You are sneaking, hidden or invisible; the Begging trip turns Sneak off and sends /makemevisible before begging.')  -- what will happen
     end
     if (by.begging or by.safefall) and combatCount > 0 then  -- trips leave the zone
         add('warn', 'Trips leave the zone, so combat abilities pause while a trip runs.')  -- combat waits during a trip

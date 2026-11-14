@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/catalog.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. Merges the skill lists of Skills2 0.4.2
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. Merges the skill lists of Skills2 0.4.2
                        and skillup.lua 1.1 into one data table, adds Eagle
                        Strike, Dragon Punch, Intimidation, Bind Wound,
                        Fishing and Meditate, and the per class default spells

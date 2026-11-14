@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/ARCHITECTURE.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.0
+  VERSION : 1.0.1
   WHAT    : How the package is built: module map, data flow, the run loop,
             the documentation standard, settings, and every game / plugin
             command it sends with where it was checked.
@@ -41,7 +41,7 @@ Rule: lower modules never require higher ones. `ui` and `init` only set `runner.
 
 1. Safety: stop under the health limit or on death; wait while zoning or stunned (Safe Fall waits to heal instead of stopping).
 2. Anything left? If every ticked skill is mastered: beep once and stop (settings). If only Meditate is left: stop with an explanation.
-3. Trips (Begging, then Safe Fall), one at a time.
+3. Trips (Begging, then Safe Fall), one at a time. At the Begging spot only non toggle utility skills are trained; Sneak and Hide are undone before each beg.
 4. Meditation: sit below the start percent, stand at the stop percent.
 5. Abilities: each ticked utility and combat skill whose ability is ready.
 6. One cast, round robin over the schools that still need work and are not held by the guard or a fatal cast result.
@@ -96,6 +96,7 @@ Every command goes through `utils.cmd`. Nothing outside this list is sent.
 | `/face fast id <id>` | abilities | [MacroQuest /face](https://docs.macroquest.org/reference/commands/face/) |
 | `/doability "<name>"` | abilities, travel | [MacroQuest /doability](https://docs.macroquest.org/reference/commands/doability/) |
 | `/destroy`, `/autoinventory` | spells | [MacroQuest /destroy](https://docs.macroquest.org/reference/commands/destroy/); `/autoinventory` is built in |
+| `/makemevisible` | travel | [MacroQuest /makemevisible](https://docs.macroquest.org/reference/commands/makemevisible/) |
 | `/beep` | runner | [MacroQuest /beep](https://docs.macroquest.org/reference/commands/beep/) |
 | `/nomodkey /keypress forward hold` and `/nomodkey /keypress forward` | travel | [MacroQuest /keypress](https://docs.macroquest.org/reference/commands/keypress/), [/nomodkey](https://docs.macroquest.org/reference/commands/nomodkey/) |
 | `/nav id <id>`, `/nav locxy`, `/nav locxyz`, `/nav stop` | abilities, travel, runner | [MQ2Nav command reference](https://github-wiki-see.page/m/brainiac/MQ2Nav/wiki/Command-Reference) |
@@ -107,7 +108,7 @@ TLO members and ImGui calls were checked against [mq-definitions](https://github
 
 ## Testing
 
-- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
+- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
 - `dev/doc_audit.py`: documentation standard.
 
 <!--

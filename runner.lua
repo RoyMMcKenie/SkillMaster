@@ -1,8 +1,12 @@
 --[[==========================================================================
   FILE        : skillmaster/runner.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. Replaces the separate loops of Skills2
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  The run stops with the trip's reason when a failed
+                       trip is all that is left. Hide, Sneak and Feign Death are no longer trained at
+                       the Begging spot (they made the NPC unable to see
+                       you).
+                1.0.0  First release. Replaces the separate loops of Skills2
                        (/SPA, /SAA, /SS, /SBEG, /SSAFE, /SDA) and the single
                        loop of skillup.lua with one runner that trains every
                        ticked skill together, meditates when needed, and
@@ -360,11 +364,20 @@ function runner.tick()
     -- 2b. Only passive skills (Meditate) left: nothing can raise them on
     --     its own, because Meditate only rises while missing mana is coming
     --     back. Stop instead of sitting at full mana forever.
-    local onlyPassive = true  -- assume so until a non passive entry shows up
+    --     Same for a trip that failed: it will not restart this run, so
+    --     when nothing else is left, stop and show the trip's reason.
+    local onlyPassive, failedTrip, other = false, nil, false  -- what is left
     for _, e in ipairs(active) do
-        if e.method ~= 'passive' then onlyPassive = false break end      -- real work remains
+        if e.method == 'passive' then onlyPassive = true                 -- Meditate
+        elseif e.method == 'travel' and travel.failed(e.key) then failedTrip = e  -- dead trip
+        else other = true break end                                      -- real work remains
     end
-    if onlyPassive then
+    if not other and failedTrip then
+        runner.stop(string.format('%s trip stopped: %s', failedTrip.name, travel.trip and travel.trip.status or 'failed'))
+        return
+    end
+    if not other and onlyPassive then  -- Meditate cannot be trained alone
+        -- Explain why instead of sitting at full mana forever.
         runner.stop('Only Meditate is left; it rises while mana regenerates, so keep it ticked alongside a casting school')
         return
     end
@@ -375,8 +388,13 @@ function runner.tick()
             if travel.tick(e) then
                 runner.status = 'Trip: ' .. (travel.trip and travel.trip.status or '')  -- show the trip step
                 if travel.trip and travel.trip.phase == 'work' then        -- at the spot: utility too
+                    local begging = travel.trip.key == 'begging'           -- NPC must see you
                     for _, u in ipairs(active) do
-                        if u.group == 'utility' then abilities.train(u) end
+                        -- While begging skip Hide / Sneak (toggles) and Feign
+                        -- Death: they make you unseen or lying down, and the
+                        -- game answers every beg with "can't see you".
+                        local blocks = begging and (u.method == 'toggle' or u.method == 'feign')
+                        if u.group == 'utility' and not blocks then abilities.train(u) end
                     end
                 end
                 return

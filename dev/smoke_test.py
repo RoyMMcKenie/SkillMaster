@@ -2,8 +2,9 @@
 =============================================================================
   FILE        : skillmaster/dev/smoke_test.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First version, built the same way as the ClericFood
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Begging scenarios added (hidden, sneaking, unseen spam).
+                1.0.0  First version, built the same way as the ClericFood
                        smoke test.
 
   WHAT  : Runs the real SkillMaster Lua code against a fake MacroQuest and a
@@ -35,6 +36,12 @@
                        Resume finishes the run
             guard      Divination with no primary chosen: held at 50
             monk       Mend, Sneak, Feign Death, Kick on an NPC target
+            beg        start hidden and sneaking with Begging, Hide, Sneak
+                       ticked: Sneak is turned off and /makemevisible sent
+                       before any beg, no "can't see you" reply, Hide and
+                       Sneak are trained only after the trip
+            begstuck   /makemevisible does nothing: no beg is sent and the
+                       run stops with the trip's reason
 
   WHEN  : After any change to logic in runner, spells, abilities, conflicts.
 
@@ -117,6 +124,11 @@ if SCENARIO == 'cleric' or SCENARIO == 'pause' or SCENARIO == 'conflict' or SCEN
   spell('Halo of Light', 'Conjuration', 10, 'Self', true)
   spell('Strike', 'Evocation', 5, 'Single', false)
 end
+if SCENARIO == 'beg' or SCENARIO == 'begstuck' then        -- warrior at the begging spot
+  G.cls, G.maxMana, G.mana = 'WAR', 0, 0
+  G.zone, G.invis, G.sneak = 'freeportwest', true, true   -- starts hidden and sneaking
+  skill('Begging', 0, 20); skill('Hide', 0, 5); skill('Sneak', 0, 5)
+end
 if SCENARIO == 'monk' then
   G.cls, G.maxMana, G.mana = 'MNK', 0, 0
   skill('Mend', 3, 10); skill('Sneak', 0, 8); skill('Feign Death', 0, 6); skill('Kick', 2, 12)
@@ -143,18 +155,19 @@ TLO.Me = {
   Mercenary = val(nil), CombatState = val('ACTIVE'),
   Feigning = function() return G.feign end,
   Zoning = val(false), Dead = val(false), PctHPs = function() return G.hp end,
-  Stunned = val(false), Invis = val(false), FreeInventory = val(10),
+  Stunned = val(false), FreeInventory = val(10),
+  Invis = function() return G.invis == true end, Sneaking = function() return G.sneak == true end,
   Inventory = function() return { Type = val('Shield'), Name = val('Shield') } end,
   Casting = { ID = val(nil) },
 }
 TLO.Skill = function(k) local n = sk(k)
   return { ID = val(G.ids[n]), Name = val(G.ids[n] and n or nil) } end
-TLO.Plugin = function(n) return { IsLoaded = val(n == 'MQ2Cast' or n == 'MQ2Nav') } end
+TLO.Plugin = function(n) return { IsLoaded = val(n == 'MQ2Cast' or n == 'MQ2Nav' or n == 'MQ2EasyFind') } end
 TLO.Lua = { Script = function() return { Status = val('RUNNING') } end }   -- RGMercs running
 TLO.Navigation = { MeshLoaded = val(true), Active = val(false) }
 TLO.Mercenary = { ID = val(nil) }
 TLO.Target = { ID = function() return G.target end, Type = function() return G.target and G.targetType end,
-               Dead = val(false), CleanName = val('a rat') }
+               Dead = val(false), CleanName = function() return G.targetName or 'a rat' end }
 TLO.Spawn = function() return { Distance = val(5) } end
 TLO.Cast = { Status = val('I'), Result = function() return G.result end }
 TLO.Cursor = { ID = function() return G.cursor and 1 or nil end,
@@ -164,7 +177,7 @@ TLO.GameTime = { Night = val(false) }
 TLO.Window = function() return { Open = val(false), DoClose = function() end } end
 TLO.MacroQuest = { GameState = val('INGAME') }
 TLO.EverQuest = { Server = val('test') }
-TLO.Zone = { ShortName = val('poknowledge') }
+TLO.Zone = { ShortName = function() return G.zone or 'poknowledge' end }
 
 -- Clock, events.
 local now, evs, pending = 0, {}, {}
@@ -174,7 +187,10 @@ local mq = { TLO = TLO, configDir = '/tmp',
   bind = function() end, unbind = function() end, imgui = { init = function() end },
   event = function(n, _, cb) evs[n] = cb end, unevent = function(n) evs[n] = nil end,
   doevents = function()
-    for _, p in ipairs(pending) do if evs.skm_skillup then evs.skm_skillup('line', p[1], p[2]) end end
+    for _, p in ipairs(pending) do
+      if p[1] == 'UNSEEN' then if evs.skm_begunseen then evs.skm_begunseen('line') end  -- "can't see you"
+      elseif evs.skm_skillup then evs.skm_skillup('line', p[1], p[2]) end            -- skill up line
+    end
     pending = {}
   end,
 }
@@ -210,9 +226,18 @@ function mq.cmd(c)
   local ab = c:match('^/doability "(.+)"')
   if ab then
     if ab == 'Slam' then ab = 'Bash' end
+    if ab == 'Begging' and (G.invis or G.sneak) then          -- the line from the screenshot
+      G.unseen = (G.unseen or 0) + 1; pending[#pending + 1] = { 'UNSEEN' }; return
+    end
+    if ab == 'Begging' then G.begs = (G.begs or 0) + 1 end
+    if ab == 'Sneak' then G.sneak = not G.sneak end          -- toggle
+    if ab == 'Hide' then G.invis = true end                   -- hidden counts as invis
     raise(ab)
     if ab == 'Feign Death' then G.feign = true end
   end
+  if c == '/makemevisible' and SCENARIO ~= 'begstuck' then G.invis = false end  -- begstuck: it does not work
+  if c == '/mqtarget npc Diggs' then G.target, G.targetName = 900, 'Diggs' end
+  local tz = c:match('^/travelto (%a+)$'); if tz and tz ~= 'stop' then G.zone = tz end
   if c == '/sit' then G.sitting = true end
   if c == '/stand' then G.sitting = false; G.feign = false end
   if c == '/destroy' or c == '/autoinventory' then G.cursor = nil end
@@ -269,6 +294,8 @@ local sel = {
   cleric   = { 'alteration', 'divination', 'conjuration', 'spec_alteration', 'meditate' },
   conflict = { 'spec_alteration', 'spec_evocation' },
   guard    = { 'divination' },
+  beg      = { 'begging', 'hide', 'sneak' },
+  begstuck = { 'begging' },
   monk     = { 'mend', 'sneak', 'feign', 'kick' },
 }
 for _, k in ipairs(sel[SCENARIO]) do config.setSelected(k, true) end
@@ -287,6 +314,7 @@ for i = 1, 3000 do
   if i > 1 and runner.state == 'idle' then break end
 end
 renderAll()                                                -- final window
+travel_status = runner.status or ''                        -- why the run ended
 local stillRunning = runner.state ~= 'idle'
 if stillRunning then runner.stop('test end') end
 
@@ -306,6 +334,16 @@ return {
   mend = G.skills['Mend'].cur, sneak = G.skills['Sneak'].cur, fd = G.skills['Feign Death'].cur,
   kick = G.skills['Kick'].cur, gains = stats.data.total,
   pauseIdle = G.pauseIdle, renders = renders,
+  beg = G.skills['Begging'].cur, hide = G.skills['Hide'].cur, sneakv = G.skills['Sneak'].cur,
+  unseen = G.unseen or 0, begs = G.begs or 0, visible = has('/makemevisible'),
+  sneakFirst = (function()                                 -- Sneak turned off before the first beg
+    for _, c in ipairs(G.cmds) do
+      if c == '/doability "Sneak"' then return true end
+      if c == '/doability "Begging"' then return false end
+    end
+    return false
+  end)(),
+  tripStatus = travel_status,
 }
 '''
 
@@ -331,6 +369,17 @@ def check(scenario, o):
         if not o.get('pauseIdle'): bad.append('commands were sent while paused')
         if o['still'] or o['alt'] != 60: bad.append('run did not finish after Resume')
         if o['gem1'] != 'Courage': bad.append('gems not restored')
+    elif scenario == 'beg':
+        if o['beg'] != 20: bad.append('Begging not at cap (%s)' % o['beg'])
+        if o['unseen'] != 0: bad.append('begged while unseen %d times' % o['unseen'])
+        if not o['visible']: bad.append('/makemevisible never sent')
+        if not o['sneakFirst']: bad.append('Sneak was not turned off before begging')
+        if (o['hide'], o['sneakv']) != (5, 5): bad.append('Hide / Sneak not trained after the trip')
+        if o['still']: bad.append('run did not finish')
+    elif scenario == 'begstuck':
+        if o['begs'] != 0 or o['unseen'] != 0: bad.append('begged while still invisible')
+        if o['still']: bad.append('run kept going after the trip failed')
+        if 'cannot see you' not in o['tripStatus']: bad.append('trip did not stop with a reason: %r' % o['tripStatus'])
     elif scenario == 'conflict':
         if o['casts'] != 0: bad.append('cast despite mutually exclusive specializations')
     elif scenario == 'guard':
@@ -375,7 +424,7 @@ def main():
     HOW   : run() for each name, even after a failure.
     WHEN  : From the command line.
     """
-    names = ('cleric', 'pause', 'conflict', 'guard', 'monk')                # every scenario
+    names = ('cleric', 'pause', 'conflict', 'guard', 'monk', 'beg', 'begstuck')                # every scenario
     only = os.getenv('SKM_ONLY')                                   # optional single scenario
     results = [run(s) for s in names if not only or s == only]
     print('ALL PASS' if all(results) else 'SOME FAILED')

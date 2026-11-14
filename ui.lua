@@ -1,8 +1,9 @@
 --[[==========================================================================
   FILE        : skillmaster/ui.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.0
-  CHANGES     : 1.0.0  First release. New window; Skills2 and skillup.lua
+  VERSION     : 1.0.1
+  CHANGES     : 1.0.1  Version number only; no code change.
+                1.0.0  First release. New window; Skills2 and skillup.lua
                        were driven only by slash commands.
 
   WHAT  : The SkillMaster window. Always visible at the top: run status,
