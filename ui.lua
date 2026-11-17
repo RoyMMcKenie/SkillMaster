@@ -1,8 +1,11 @@
 --[[==========================================================================
   FILE        : skillmaster/ui.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.5
-  CHANGES     : 1.0.5  Options, Trips: Set ledge here, Set landing spot here and
+  VERSION     : 1.1.0
+  CHANGES     : 1.1.0  Requires the four consolidated files (core, data,
+                       actions, engine) instead of eleven modules. No
+                       change to the window.
+                1.0.5  Options, Trips: Set ledge here, Set landing spot here and
                        Clear spots for Safe Fall (drawSafeFallSpots).
                 1.0.4  End SkillMaster button in the header, next to Stop.
                 1.0.3  Options: Begging range box.
@@ -10,6 +13,12 @@
                 1.0.1  Version number only; no code change.
                 1.0.0  First release. New window; Skills2 and skillup.lua
                        were driven only by slash commands.
+
+  CREDITS     : The window is original to SkillMaster. Its options cover
+                features first written in Skills2 0.4.2 by Blasty (RedGuides
+                resource 2302) and Skill Skillup 1.1, skillup.lua, by
+                GoldenFrog (RedGuides resource 2937). Full lineage in
+                README, Credits and attribution.
 
   WHAT  : The SkillMaster window. Always visible at the top: run status,
           Start / Pause / Stop / End SkillMaster buttons and the warning
@@ -50,17 +59,21 @@
 
 local mq        = require('mq')                     -- TLO
 local ImGui     = require('ImGui')                  -- MacroQuest ImGui binding
-local utils     = require('skillmaster.utils')      -- now, clamp, formatDuration
-local config    = require('skillmaster.config')     -- settings
-local catalog   = require('skillmaster.catalog')    -- entries
-local skills    = require('skillmaster.skills')     -- values
-local plugins   = require('skillmaster.plugins')    -- plugin list
-local spells    = require('skillmaster.spells')     -- chosen spells
-local abilities = require('skillmaster.abilities')  -- wait reasons
-local travel    = require('skillmaster.travel')     -- trip status
-local conflicts = require('skillmaster.conflicts')  -- warnings
-local runner    = require('skillmaster.runner')     -- state, request
-local stats     = require('skillmaster.stats')      -- session
+local core      = require('skillmaster.core')       -- foundation layer
+local utils     = core.utils                        -- now, clamp, formatDuration
+local config    = core.config                       -- settings
+local plugins   = core.plugins                      -- plugin list
+local data      = require('skillmaster.data')       -- knowledge layer
+local catalog   = data.catalog                      -- entries
+local skills    = data.skills                       -- values
+local stats     = data.stats                        -- session
+local actions   = require('skillmaster.actions')    -- action layer
+local spells    = actions.spells                    -- chosen spells
+local abilities = actions.abilities                 -- wait reasons
+local travel    = actions.travel                    -- trip status
+local engine    = require('skillmaster.engine')     -- decision layer
+local conflicts = engine.conflicts                  -- warnings
+local runner    = engine.runner                     -- state, request
 
 local ui = {}
 
@@ -732,8 +745,10 @@ return ui  -- hand the module table to whoever requires it
     drawTrain(), drawSpells(), drawAllSkills(), drawSession(),
     drawOptions(), drawSafeFallSpots(), drawHelp()
 
-  DEPENDENCIES : mq, ImGui, skillmaster.utils, config, catalog, skills,
-                 plugins, spells, abilities, travel, conflicts, runner, stats
+  DEPENDENCIES : mq, ImGui, skillmaster.core (utils, config, plugins),
+                 skillmaster.data (catalog, skills, stats),
+                 skillmaster.actions (spells, abilities, travel),
+                 skillmaster.engine (conflicts, runner)
 
   HOW TO EDIT SAFELY
     - Never send game commands from here; set runner.request.

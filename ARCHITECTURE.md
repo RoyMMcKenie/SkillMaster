@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/ARCHITECTURE.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.5
+  VERSION : 1.1.0
   WHAT    : How the package is built: module map, data flow, the run loop,
             the documentation standard, settings, and every game / plugin
             command it sends with where it was checked.
@@ -13,27 +13,33 @@
 -->
 # SkillMaster architecture
 
-## Module map
+## File and section map
 
-| File | Job | Depends on |
-|---|---|---|
-| `init.lua` | Entry point: `/skm` binding, startup, main loop, shutdown | all below |
-| `utils.lua` | Chat output, `utils.cmd` (single place every command goes through, traced with Debug on), abortable delay, small helpers | mq |
-| `config.lua` | Defaults and the per character settings file `skillmaster_<server>_<name>.lua` in the MacroQuest config folder (`mq.pickle`) | mq, utils |
-| `catalog.lua` | Static data: schools, every trainable skill (key, in game name, group, method, notes), class default spells, unsafe SPA list | none |
-| `plugins.lua` | Which optional plugins / scripts are loaded (1 s cache), RGMercs pause and unpause | mq, utils |
-| `skills.lua` | Current value, cap, available, mastered, ability ready (500 ms cache) | mq, catalog |
-| `stats.lua` | Session numbers and log; the skill up chat event | mq |
-| `spells.lua` | Spell book scan, safety check, spell choice per school, gem borrowing and restore, the cast itself, cursor cleanup | mq, utils, config, catalog, plugins, skills, stats |
-| `abilities.lua` | Pressing abilities, toggles, Feign Death, Tracking, Forage, combat target and approach | mq, utils, config, catalog, plugins, skills, stats |
-| `travel.lua` | Begging and Safe Fall trips as a small state machine (zone, spot, work, home) | mq, utils, config, plugins, skills |
-| `conflicts.lua` | Every warning and error shown in the header; specialization state and guard | mq, config, catalog, plugins, skills, spells, abilities |
-| `runner.lua` | Run state (idle / running / paused), Start / Pause / Resume / Stop, one tick of work | everything above |
-| `ui.lua` | The ImGui window, six tabs, debounced settings save | everything above |
+Six Lua files. The four layer files hold several sections each; a section is one former 1.0.x module, kept whole inside a `do ... end` block with its own doc block, HISTORY line and END OF SECTION footer. Comments name a section as `file.lua/section`.
+
+| File | Section | Job | Uses |
+|---|---|---|---|
+| `init.lua` | | Entry point: `/skm` binding, startup, main loop, shutdown | all below |
+| `core.lua` | utils | Chat output, `utils.cmd` (single place every command goes through, traced with Debug on), abortable delay, small helpers | mq |
+| | config | Defaults and the per character settings file `skillmaster_<server>_<name>.lua` in the MacroQuest config folder (`mq.pickle`) | utils |
+| | plugins | Which optional plugins / scripts are loaded (1 s cache), RGMercs pause and unpause | utils |
+| `data.lua` | catalog | Static data: schools, every trainable skill (key, in game name, group, method, notes), class default spells, unsafe SPA list | none |
+| | skills | Current value, cap, available, mastered, ability ready (500 ms cache) | utils, catalog |
+| | stats | Session numbers and log; the skill up chat event | utils, skills |
+| `actions.lua` | spells | Spell book scan, safety check, spell choice per school, gem borrowing and restore, the cast itself, cursor cleanup | core, catalog, stats |
+| | abilities | Pressing abilities, toggles, Feign Death, Tracking, Forage, combat target and approach | core, skills, stats, spells |
+| | travel | Begging and Safe Fall trips as a small state machine (zone, spot, work, home) | core, skills, stats |
+| `engine.lua` | conflicts | Every warning and error shown in the header; specialization state and guard | core, data, spells, abilities |
+| | runner | Run state (idle / running / paused), Start / Pause / Resume / Stop, one tick of work | everything above |
+| `ui.lua` | | The ImGui window, six tabs, debounced settings save | everything above |
+
+Why these groups: each file is one layer, and the modules inside a layer were always loaded together. core depends on nothing in the package; data reads but never acts; actions acts; engine decides; ui and init sit on top. A file only requires files above it in this list: core, data, actions, engine, ui, init.
+
+Origins: the skill list, ability loops and trips come from Skills2 0.4.2 by Blasty; the class spell tables, ability detection, skill up event and training loop from Skill Skillup 1.1 by GoldenFrog. The README Credits section has the full lineage and links.
 
 End SkillMaster: the button (or `/skm end`) sets `runner.endScript` and `runner.quitting`; the loop ends, `shutdown()` restores gems, unpauses RGMercs and saves, and only then `init.lua` sends `/lua stop skillmaster`.
 
-Rule: lower modules never require higher ones. `ui` and `init` only set `runner.request`; the main loop applies it, so button presses never run game commands from inside the ImGui callback.
+Rule: lower files never require higher ones, and inside a file a section only uses sections above it. `ui` and `init` only set `runner.request`; the main loop applies it, so button presses never run game commands from inside the ImGui callback.
 
 ## Main loop (init.lua, every 100 ms)
 
@@ -58,10 +64,12 @@ Enforced by `dev/doc_audit.py`, which must PASS before a release:
 - Every function: a WHAT / WHY / WHERE / HOW / WHEN block above it, or a comment directly above for a tiny helper documented in a shared block.
 - Every line of code: a comment on the line or within the three lines above.
 - Footer in the last 80 lines: END OF FILE, public summary, dependencies, HOW TO EDIT SAFELY.
+- Header CREDITS line naming the original authors of any borrowed idea (added in 1.1.0; checked by check 7).
+- In the layer files, every SECTION block has WHAT / WHY / WHERE / HOW / WHEN and a matching END OF SECTION footer (check 6, added in 1.1.0).
 - VERSION in every file matches the newest heading in CHANGELOG.md.
 - Markdown files use an HTML comment header and footer.
 
-## Settings (config.lua)
+## Settings (core.lua/config)
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -113,11 +121,11 @@ TLO members and ImGui calls were checked against [mq-definitions](https://github
 
 ## Testing
 
-- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, no fixed spot), endbutton (runs init.lua, presses End SkillMaster: gems restored and settings saved before `/lua stop skillmaster`), fall (on the recorded ledge: no walk before the first step, faces the landing spot, walks back with /nav locyxz), fallunset (nothing recorded: no movement), fallpok (ledge in PoK: refused). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
+- `dev/smoke_test.py` (needs `pip install lupa`): fake MacroQuest and ImGui, run on LuaJIT 2.1 when lupa provides it. Scenarios: cleric (three schools and Specialize Alteration to cap with meditation, gems restored, Gate never cast, summoned items destroyed), pause (nothing sent while paused, Resume finishes), conflict (two specializations block Start), guard (school held at 50), monk (Mend, Sneak, Feign Death, Kick), beg (starts hidden and sneaking: both undone before any beg), begstuck (invisibility cannot be dropped: no beg sent, run stops with the reason), tracking_open and tracking_closed (Tracking pressed whenever ready to its cap, window never touched), begnear (beside Diggs: no movement command at all), begfar (Diggs across the zone: /nav id to Diggs, no fixed spot), endbutton (runs init.lua, presses End SkillMaster: gems restored and settings saved before `/lua stop skillmaster`), fall (on the recorded ledge: no walk before the first step, faces the landing spot, walks back with /nav locyxz), fallunset (nothing recorded: no movement), fallpok (ledge in PoK: refused). Every tab is drawn idle, running, paused and at the end, checking argument types and Begin/End balance.
 - `dev/doc_audit.py`: documentation standard.
 
 <!--
   END OF FILE : skillmaster/ARCHITECTURE.md
   HOW TO EDIT SAFELY: add a command to the table, with its source URL,
-  before sending it from code. Keep the module map in step with requires.
+  before sending it from code. Keep the file and section map in step with requires.
 -->

@@ -1,0 +1,32 @@
+# =============================================================================
+#   FILE    : skillmaster/.gitignore
+#   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
+#   VERSION : 1.1.0
+#   WHAT    : Files git should never upload.
+#   WHY     : Keeps the repository to source and documentation only.
+#   WHERE   : Root of the repository (the skillmaster folder).
+#   HOW     : One pattern per line; # starts a comment.
+#   WHEN    : Read by git on every commit.
+# =============================================================================
+
+# Python cache created when dev/doc_audit.py or dev/smoke_test.py runs.
+__pycache__/
+*.pyc
+
+# Packaged zips are built from the source; the source is what gets versioned.
+*.zip
+
+# Per character settings files (skillmaster_<server>_<name>.lua), in case one
+# is ever copied here by mistake. The real ones live in <MacroQuest>/config/.
+skillmaster_*.lua
+
+# Editor and operating system clutter.
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+#   END OF FILE : skillmaster/.gitignore
+# =============================================================================

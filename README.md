@@ -1,7 +1,7 @@
 <!--
   FILE    : skillmaster/README.md
   PACKAGE : SkillMaster Lua (MacroQuest / EverQuest)
-  VERSION : 1.0.5
+  VERSION : 1.1.0
   WHAT    : What SkillMaster does, how to install it, how to use the window
             and commands, and what has not been verified in game yet.
   WHY     : First thing to read before running or editing the package.
@@ -9,13 +9,38 @@
             covers versions.
   WHEN    : Read before first use; update when behaviour or commands change.
 -->
-# SkillMaster 1.0.5
+# SkillMaster 1.1.0
 
-SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window. It merges the two earlier scripts, Skills2 0.4.2 (Blasty) and skillup.lua 1.1, into one modular, fully documented package.
+SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window. It brings together the best of two RedGuides scripts, Skills2 0.4.2 by Blasty and Skill Skillup 1.1 (skillup.lua) by GoldenFrog, in one modular, fully documented package. See [Credits and attribution](#credits-and-attribution).
+
+## At a glance
+
+- One window, one command (`/skm`) in place of the seven binds of Skills2 and the start and go loop of skillup.lua.
+- Casting schools, specializations, utility and combat abilities, Tracking, Forage, Begging and Safe Fall trips.
+- Guard rails before speed: specialization lock protection, unsafe spell filter, health stop, fear avoidance, gem restore.
+- Pause and Resume at any moment, and a tidy End SkillMaster that puts everything back.
+- Every slash command it sends is listed in [ARCHITECTURE.md](ARCHITECTURE.md) with the documentation page it was checked against.
+- Fifteen simulated scenarios run against the real code on LuaJIT 2.1, plus an automated documentation audit, before every release.
+
+## Files
+
+| File | What is in it |
+|---|---|
+| `init.lua` | Entry point: `/lua run skillmaster`, the `/skm` command, the main loop, shutdown |
+| `core.lua` | Foundation: chat output and the single traced command sender, settings file, plugin detection and RGMercs hand off |
+| `data.lua` | Knowledge: the skill catalog, live skill values and caps, session statistics |
+| `actions.lua` | Action: spell casting, ability presses, Begging and Safe Fall trips |
+| `engine.lua` | Decision: warnings and specialization guard, the run state and tick |
+| `ui.lua` | The ImGui window and its six tabs |
+| `dev/smoke_test.py` | Fake MacroQuest test harness (not used by the game) |
+| `dev/doc_audit.py` | Documentation standard checker (not used by the game) |
+
+Up to 1.0.5 the code was spread over thirteen Lua files. 1.1.0 groups modules that always load together into one file per layer; each keeps its own documented section. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Install
 
-1. Copy the `skillmaster` folder into `<MacroQuest>/lua/` so you have `<MacroQuest>/lua/skillmaster/init.lua`.
+1. Put the files in `<MacroQuest>/lua/skillmaster/` so you have `<MacroQuest>/lua/skillmaster/init.lua`. From GitHub: Code, Download ZIP, then rename the extracted folder to `skillmaster`; or `git clone <repo url> skillmaster` inside `<MacroQuest>/lua/`.
+   Upgrading from 1.0.x: delete the old `skillmaster` folder first, because eleven of its files no longer exist. Your settings live in `<MacroQuest>/config/` and are kept.
 2. In game: `/lua run skillmaster`
 3. The window opens. `/skm` shows or hides it.
 
@@ -78,7 +103,7 @@ Tabs:
 
 - Begging: before each beg, Sneak is turned off and Hide or invisibility is dropped with `/makemevisible`, because the NPC must see you. If EverQuest still answers "can't see you" after three tries, the trip stops with that reason.
 
-- Spells with charm, fear, bind affinity, gate, pet summon, shadowstep, teleport, evacuate or translocate effects are never picked automatically (SPA list in `catalog.lua`, from the [MacroQuest SPA list](https://docs.macroquest.org/reference/general/spa-list/)).
+- Spells with charm, fear, bind affinity, gate, pet summon, shadowstep, teleport, evacuate or translocate effects are never picked automatically (SPA list in the catalog section of `data.lua`, from the [MacroQuest SPA list](https://docs.macroquest.org/reference/general/spa-list/)).
 - Stops below the health percent you set, stops if you die, and waits while zoning or stunned.
 - Temporary summoned items are destroyed only when they are NoRent and appeared right after a training cast; anything else goes to bags with `/autoinventory`.
 - Each skill stops at its cap; the run stops and beeps when every ticked skill is mastered. A run with only Meditate left stops with an explanation, because Meditate only rises while mana is coming back.
@@ -111,11 +136,39 @@ python dev/smoke_test.py     # fake MacroQuest, fifteen scenarios, every tab dra
 python dev/doc_audit.py      # documentation standard
 ```
 
-The smoke test checks logic only; it cannot prove in game names or plugin behaviour. lupa runs Lua 5.4 while MacroQuest uses LuaJIT, so the code avoids features that differ.
+The smoke test checks logic only; it cannot prove in game names or plugin behaviour. It runs on LuaJIT 2.1, the same engine as MacroQuest, when lupa provides it (current wheels do) and says which engine it used.
+
+## Credits and attribution
+
+SkillMaster stands on the work of other RedGuides authors. Their scripts were studied and their ideas, skill lists, class spell choices and chat patterns were carried into this package; the code itself was rewritten module by module. Credit belongs to them for the parts listed here.
+
+| Original work | Author | Where to find it | What SkillMaster uses from it |
+|---|---|---|---|
+| Skills2 0.4.2 (Lua) | Blasty | [RedGuides resource 2302](https://www.redguides.com/community/resources/skills2.2302/) | Skill list, passive and active ability loops, the Begging trip to Diggs in West Freeport, the Safe Fall idea, mercenary as combat target, the Skills2.ini class spell defaults, the seven slash binds that became /skm |
+| Skill Skillup: Spells and Others 1.1 (skillup.lua) | GoldenFrog | [RedGuides resource 2937](https://www.redguides.com/community/resources/skill-skillup-spells-and-others.2937/) | Per class training spell tables, race and class ability detection, the skill up chat event pattern, the start and go training loop, skipping Dance of the Fireflies at night |
+| cskillup.mac | maskoi | [RedGuides thread](https://www.redguides.com/community/threads/cskillup.87438/) | Indirectly: Skill Skillup is GoldenFrog's port of this macro |
+| CastingSkillup.mac | Arneweise | credited in cskillup.mac | Indirectly: cskillup.mac is based on it |
+| Skills auto skill raiser (macro) | Blasty | [RedGuides resource 229](https://www.redguides.com/community/resources/skills-auto-skill-raiser.229/) | Indirectly: the macro Skills2 replaced |
+
+Where each borrowed idea lives in the code: every Lua file header has a CREDITS line, and each section's HISTORY line says what came from Skills2 or skillup.lua.
+
+Also built with: [MacroQuest](https://docs.macroquest.org/) and its documentation, the [RedGuides](https://www.redguides.com/) plugin ecosystem (MQ2Cast, MQ2Nav, MQ2EasyFind, MQ2AutoForage, RGMercs), and [mq-definitions](https://github.com/macroquest/mq-definitions) for checking TLO members.
+
+### Permission status
+
+| Author | Asked | Answer |
+|---|---|---|
+| Blasty (Skills2) | not yet | |
+| GoldenFrog (Skill Skillup) | not yet | |
+
+Skill Skillup is a RedGuides Supporter (Level 2) resource. Please do not make this repository public, or post SkillMaster as a RedGuides resource, until both authors have said yes. Record each answer here with the date and a link to the message.
+
+If you are one of these authors and want anything changed or removed, open an issue or message RoyMMcKenie on RedGuides and it will be done.
 
 <!--
   END OF FILE : skillmaster/README.md
-  HOW TO EDIT SAFELY: keep the command table identical to /skm help in
+  HOW TO EDIT SAFELY: never remove or shorten the Credits section; add
+  to it when an idea comes from another author. Keep the command table identical to /skm help in
   init.lua and the Help tab in ui.lua. Move items out of "Not verified"
   only after a live test.
 -->

@@ -2,8 +2,12 @@
 =============================================================================
   FILE        : skillmaster/dev/smoke_test.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.5
-  CHANGES     : 1.0.5  Safe Fall scenarios: recorded ledge (fall), nothing
+  VERSION     : 1.1.0
+  CHANGES     : 1.1.0  Requires the consolidated files (core, data, engine).
+                       Same fifteen scenarios, same expectations. Runs on
+                       LuaJIT 2.1 when lupa provides it. Loads modules from
+                       its own package folder, whatever it is named.
+                1.0.5  Safe Fall scenarios: recorded ledge (fall), nothing
                        recorded (fallunset), ledge in PoK (fallpok).
                 1.0.4  endbutton scenario runs init.lua and presses End SkillMaster.
                 1.0.3  Begging distance scenarios (beside Diggs, far from Diggs).
@@ -73,15 +77,23 @@
           fake ImGui, idle, running, paused and at the end, and fails on a
           wrong argument type or an unbalanced Begin/End, Push/Pop pair.
 
-  NOTE  : lupa runs standard Lua 5.4; MacroQuest runs LuaJIT (Lua 5.1). The
-          package avoids features that differ.
+  NOTE  : MacroQuest runs LuaJIT 2.1 (Lua 5.1). lupa wheels include LuaJIT
+          2.1, so the test uses it when present and says so in the summary;
+          otherwise it falls back to Lua 5.4. The package avoids features that
+          differ between the two.
 =============================================================================
 """
 
 import os    # locate the package folder
 import sys   # exit code
 
-from lupa import LuaRuntime   # pip install lupa
+# Prefer LuaJIT 2.1 (what MacroQuest runs); fall back to lupa's default Lua.
+try:
+    from lupa.luajit21 import LuaRuntime   # same engine as MacroQuest
+    LUA_ENGINE = 'LuaJIT 2.1'              # reported in the summary line
+except ImportError:
+    from lupa import LuaRuntime            # pip install lupa (Lua 5.4)
+    LUA_ENGINE = 'Lua 5.4 (lupa default)'  # reported in the summary line
 
 # Parent of dev/ is the package; its parent holds skillmaster/ as a folder.
 PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,6 +104,14 @@ ROOT_DIR = os.path.dirname(PACKAGE_DIR)
 # -----------------------------------------------------------------------------
 FAKE_MQ = r'''
 package.path = './?.lua;./?/init.lua;' .. package.path   -- find skillmaster.x
+-- Also load skillmaster.<x> straight from the package folder (PKG_DIR, set by
+-- Python), so the test works whatever the checkout folder is called, for
+-- example a GitHub clone named SkillMaster on a case sensitive disk.
+table.insert(package.loaders or package.searchers, 2, function(name)  -- 5.1 and 5.4 names
+  local sub = (name == 'skillmaster') and 'init' or name:match('^skillmaster%.(.+)$')  -- our modules only
+  if not sub then return nil end                                -- let other searchers try
+  return loadfile(PKG_DIR .. '/' .. sub .. '.lua')              -- nil if missing
+end)
 
 -- val(v): callable that returns v; any field returns val(nil).
 local function val(v)
@@ -248,7 +268,7 @@ function mq.delay(ms, cond)
   if SCENARIO == 'endbutton' and ms == 100 and not cond then   -- init.lua main loop pass
     G.loops = (G.loops or 0) + 1
     if G.loops == 3 then                                        -- init.lua loaded settings by now
-      require('skillmaster.config').setSelected('alteration', true)
+      require('skillmaster.core').config.setSelected('alteration', true)
       G.binds['/skm']('start')                                  -- /skm start
     end
     if G.loops == 40 then G.pressEnd = true end                 -- press End SkillMaster
@@ -365,9 +385,9 @@ if SCENARIO == 'endbutton' then
 end
 
 -- Run.
-local config = require('skillmaster.config'); config.load()
-local stats = require('skillmaster.stats'); stats.init()
-local runner = require('skillmaster.runner'); require('skillmaster.ui')
+local config = require('skillmaster.core').config; config.load()
+local stats = require('skillmaster.data').stats; stats.init()
+local runner = require('skillmaster.engine').runner; require('skillmaster.ui')
 if SCENARIO == 'fall' or SCENARIO == 'fallpok' then         -- spots recorded in Options
   local s = config.settings
   s.safeFallZone, s.safeFallLedge, s.safeFallLanding = G.zone, { 100, 200, 50 }, { 110, 200, 20 }
@@ -535,6 +555,7 @@ def run(scenario):
     """
     lua = LuaRuntime(unpack_returned_tuples=True)                  # fresh Lua
     lua.globals().SCENARIO = scenario                              # read by FAKE_MQ
+    lua.globals().PKG_DIR = PACKAGE_DIR.replace('\\', '/')          # package folder for the searcher
     cwd = os.getcwd()
     os.chdir(ROOT_DIR)                                             # so require('skillmaster.x') works
     try:
@@ -561,7 +582,7 @@ def main():
              'tracking_open', 'tracking_closed', 'begnear', 'begfar', 'endbutton', 'fall', 'fallunset', 'fallpok')                # every scenario
     only = os.getenv('SKM_ONLY')                                   # optional single scenario
     results = [run(s) for s in names if not only or s == only]
-    print('ALL PASS' if all(results) else 'SOME FAILED')
+    print(('ALL PASS' if all(results) else 'SOME FAILED') + ' on ' + LUA_ENGINE)   # which Lua ran them
     sys.exit(0 if all(results) else 1)                             # non zero on failure
 
 

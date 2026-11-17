@@ -6,6 +6,28 @@
 -->
 # SkillMaster changelog
 
+## 1.1.0 (2026-11-17)
+
+Consolidation release for publishing on GitHub. No behaviour change: the same code, in fewer files.
+
+- Thirteen Lua files became six. Modules that always load together and sit at the same layer are now sections of one file:
+
+  | New file | Sections (old files) | Layer |
+  |---|---|---|
+  | `core.lua` | utils, config, plugins | Foundation: commands, settings, plugin detection |
+  | `data.lua` | catalog, skills, stats | Knowledge: what can be trained, where you stand, session gains |
+  | `actions.lua` | spells, abilities, travel | Action: cast, press, trips |
+  | `engine.lua` | conflicts, runner | Decision: warnings, guard, run loop |
+  | `ui.lua` | ui | Window (unchanged) |
+  | `init.lua` | init | Entry point (unchanged; MacroQuest needs it) |
+
+- Each section keeps its full doc block, its own version history (HISTORY line) and its own END OF SECTION footer. Its private locals stay private inside a `do ... end` block, so no name can leak between former modules.
+- The dependency rule still holds: core <- data <- actions <- engine <- ui <- init. Nothing points back up.
+- Comments now name a section as `file.lua/section`, for example `actions.lua/travel`.
+- Upgrading: delete the old `skillmaster` folder first (eleven of its files no longer exist), then copy the new one. Settings files are untouched.
+- Credits and attribution: README now names every author whose work SkillMaster builds on, with links: Blasty (Skills2 0.4.2), GoldenFrog (Skill Skillup 1.1, skillup.lua), maskoi (cskillup.mac, which Skill Skillup ports) and Arneweise (CastingSkillup.mac, which cskillup is based on). Every Lua header and each derived section has a CREDITS line saying exactly what came from whom. LICENSE carries the same notice.
+- dev/doc_audit.py: new check 6 for section doc blocks and footers, check 7 for the CREDITS line. dev/smoke_test.py: requires the new files; all fifteen scenarios unchanged and passing.
+
 ## 1.0.5 (2026-11-14)
 
 - Safe Fall no longer uses the Skills2 Plane of Knowledge ledge. Players report that PoK has given no falling damage since around Omens of War ([Allakhazam PoK comments](https://everquest.allakhazam.com/db/zones.html?zstrat=158)), so the skill cannot rise there.

@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2026 Roy M. McKenzie
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+THIRD PARTY CREDITS AND NOTICE
+
+SkillMaster builds on ideas, skill lists, class spell choices and chat
+patterns from these RedGuides works. Their authors keep all rights in their
+original works; the MIT license above covers SkillMaster's own code only and
+grants nothing in those works.
+
+  Skills2 0.4.2 (Lua)                         Blasty
+    https://www.redguides.com/community/resources/skills2.2302/
+  Skill Skillup: Spells and Others 1.1         GoldenFrog
+  (skillup.lua)
+    https://www.redguides.com/community/resources/skill-skillup-spells-and-others.2937/
+  cskillup.mac (ported by Skill Skillup)       maskoi
+    https://www.redguides.com/community/threads/cskillup.87438/
+  CastingSkillup.mac (basis of cskillup.mac)   Arneweise
+
+What came from which work is listed in README.md, "Credits and
+attribution", and on the CREDITS line of every Lua file.

@@ -2,8 +2,13 @@
 =============================================================================
   FILE        : skillmaster/dev/doc_audit.py
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.5
-  CHANGES     : 1.0.5  Version number only; no code change.
+  VERSION     : 1.1.0
+  CHANGES     : 1.1.0  Check 6: in the consolidated files every SECTION block
+                       has WHAT, WHY, WHERE, HOW and WHEN, and a matching
+                       END OF SECTION footer. Check 7: every Lua header
+                       has a CREDITS line (original authors of borrowed
+                       ideas, or original to SkillMaster).
+                1.0.5  Version number only; no code change.
                 1.0.4  Version number only; no code change.
                 1.0.3  Version number only; no code change.
                 1.0.2  Version number only; no code change.
@@ -32,6 +37,12 @@
                WHEN above it (or an inline comment directly above it).
             5. Every line of code has a comment at the end of the line or
                within the three lines above it.
+            6. Every "SECTION : name" block (the former modules inside
+               core, data, actions and engine) has WHAT, WHY, WHERE, HOW and
+               WHEN within its doc block and a matching "END OF SECTION :
+               name" footer.
+            7. Every header has a CREDITS line naming the original authors
+               of any borrowed idea (part of the header label check).
           Exit code is 0 when everything passes, 1 when anything fails, so
           it can be used in a script.
 
@@ -51,7 +62,7 @@ import sys     # exit code
 PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Labels every file header must contain.
-HEADER_TAGS = ['FILE', 'PACKAGE', 'VERSION', 'CHANGES', 'WHAT', 'WHY', 'WHERE', 'HOW', 'WHEN']
+HEADER_TAGS = ['FILE', 'PACKAGE', 'VERSION', 'CHANGES', 'CREDITS', 'WHAT', 'WHY', 'WHERE', 'HOW', 'WHEN']
 
 # Labels every function doc block must contain.
 FUNC_TAGS = ['WHAT', 'WHY', 'WHERE', 'HOW', 'WHEN']
@@ -134,6 +145,16 @@ def audit_file(path, version):
     changes = re.search(r'CHANGES\s*:(.*?)\n\s*\n', text, re.S)
     if not changes or version not in changes.group(1):
         problems.append('CHANGES has no entry for ' + str(version))
+
+    # Check 6: section doc blocks in the consolidated files.
+    for m in re.finditer(r'^\s*SECTION\s*:\s*(\w+)', text, re.M):      # each section
+        name = m.group(1)                                             # section name
+        block = text[m.start():text.find(']]--', m.start())]          # its doc block
+        for tag in FUNC_TAGS:
+            if tag not in block:
+                problems.append('section %s doc missing %s' % (name, tag))
+        if not re.search(r'END OF SECTION\s*:\s*%s\b' % name, text):  # footer present?
+            problems.append('section %s has no END OF SECTION footer' % name)
 
     is_comment = comment_map(lines)
     func_re = re.compile(r'\s*(local\s+)?function\s+([\w\.:]+)')

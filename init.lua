@@ -1,8 +1,10 @@
 --[[==========================================================================
   FILE        : skillmaster/init.lua
   PACKAGE     : SkillMaster Lua  (MacroQuest / EverQuest)
-  VERSION     : 1.0.5
-  CHANGES     : 1.0.5  Version number only; no code change.
+  VERSION     : 1.1.0
+  CHANGES     : 1.1.0  Requires the four consolidated files instead of
+                       eight modules. Version 1.1.0 at start.
+                1.0.5  Version number only; no code change.
                 1.0.4  /skm end and the End SkillMaster button: tidy
                        shutdown, then /lua stop skillmaster.
                 1.0.3  Version 1.0.3.
@@ -13,6 +15,12 @@
                        replace the seven binds of Skills2 (/SPA /SAA /SS
                        /SBEG /SSAFE /SDA /StopS) and the start-and-go loop of
                        skillup.lua.
+
+  CREDITS     : /skm replaces the seven slash binds of Skills2 0.4.2 by
+                Blasty (RedGuides resource 2302) and the start and go loop
+                of Skill Skillup 1.1, skillup.lua, by GoldenFrog (RedGuides
+                resource 2937). Full lineage in README, Credits and
+                attribution.
 
   WHAT  : Entry point of SkillMaster. Loads settings, opens the window,
           registers /skm, and runs the main loop until you quit.
@@ -42,14 +50,17 @@
 ==========================================================================]]--
 
 local mq      = require('mq')                   -- bind, imgui, delay, doevents
-local utils   = require('skillmaster.utils')    -- echo
-local config  = require('skillmaster.config')   -- load, save, selection
-local catalog = require('skillmaster.catalog')  -- entries
-local skills  = require('skillmaster.skills')   -- values for /skm status
-local stats   = require('skillmaster.stats')    -- event, session
-local runner  = require('skillmaster.runner')   -- the run
+local core    = require('skillmaster.core')     -- foundation layer
+local utils   = core.utils                      -- echo
+local config  = core.config                     -- load, save, selection
+local data    = require('skillmaster.data')     -- knowledge layer
+local catalog = data.catalog                    -- entries
+local skills  = data.skills                     -- values for /skm status
+local stats   = data.stats                      -- event, session
+local engine  = require('skillmaster.engine')   -- decision layer
+local runner  = engine.runner                   -- the run
 local ui      = require('skillmaster.ui')       -- the window
-local travel  = require('skillmaster.travel')   -- begging chat event
+local travel  = require('skillmaster.actions').travel  -- begging chat event
 
 --- Version ---------------------------------------------------------------------------
 -- WHAT : Package version shown at start.
@@ -57,7 +68,7 @@ local travel  = require('skillmaster.travel')   -- begging chat event
 -- WHERE: startup message.
 -- HOW  : Must match CHANGELOG.md.
 -- WHEN : Once.
-local VERSION = '1.0.5'
+local VERSION = '1.1.0'
 
 --- Script name -----------------------------------------------------------------------
 -- WHAT : The name MacroQuest knows this script by: the folder name used in
@@ -212,8 +223,9 @@ if runner.endScript then utils.cmd('/lua stop %s', SCRIPT_NAME) end  -- document
 
   PUBLIC : none (entry point). Command: /skm [show|start|pause|stop|all|none|status|quit|end|help]
 
-  DEPENDENCIES : mq, skillmaster.utils, config, catalog, skills, stats,
-                 runner, ui
+  DEPENDENCIES : mq, skillmaster.core (utils, config), skillmaster.data
+                 (catalog, skills, stats), skillmaster.engine (runner),
+                 skillmaster.actions (travel), skillmaster.ui
 
   HOW TO EDIT SAFELY
     - Keep the main loop short; real work belongs in runner.tick.
