@@ -20,6 +20,7 @@ SkillMaster trains EverQuest skills to their cap from one MacroQuest Lua window.
 - Guard rails before speed: specialization lock protection, unsafe spell filter, health stop, fear avoidance, gem restore.
 - Pause and Resume at any moment, and a tidy End SkillMaster that puts everything back.
 - Every slash command it sends is listed in [ARCHITECTURE.md](ARCHITECTURE.md) with the documentation page it was checked against.
+- [AUDIT.md](AUDIT.md) is a line by line source audit: every game data call, Lua function, ImGui call, command, chat event and skill name matched to the definition or plugin source that defines it.
 - Fifteen simulated scenarios run against the real code on LuaJIT 2.1, plus an automated documentation audit, before every release.
 
 ## Files

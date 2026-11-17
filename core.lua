@@ -706,6 +706,8 @@ end  -- of the config section
       MQ2AutoForage /startforage, /stopforage
                     https://docs.macroquest.org/plugins/community-plugins/mq2autoforage/
       RGMercs (Lua) /rgl pause, /rgl unpause
+                    https://github.com/DerpleDude/rgmercs/blob/c94847de7dda44123d5b5693049547541df75d87/utils/binds.lua#L567-L589
+                    (/rgl reaches the /rglua bind by MacroQuest's command prefix match)
 ==========================================================================]]--
 do  -- plugins section scope: locals declared here stay inside it
     --- Plugin descriptions ----------------------------------------------------------

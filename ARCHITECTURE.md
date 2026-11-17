@@ -102,8 +102,8 @@ Every command goes through `utils.cmd`. Nothing outside this list is sent.
 |---|---|---|
 | `/memspell <gem> "<spell>"` | spells | [MacroQuest docs](https://docs.macroquest.org/reference/commands/memspell/) |
 | `/casting "<spell>\|gem<n>" -maxtries\|1 -targetid\|<id>` | spells | [MQ2Cast docs](https://docs.macroquest.org/plugins/community-plugins/mq2cast/) |
-| `/cast <gem>`, `/interrupt`, `/sit`, `/stand` | spells, runner, abilities | EverQuest built in commands |
-| `/mqtarget id <id>`, `/mqtarget npc <name>` | spells, abilities, travel | [MacroQuest /target (now /mqtarget)](https://docs.macroquest.org/reference/commands/target/) |
+| `/cast <gem>`, `/interrupt`, `/sit`, `/stand` | spells, runner, abilities | [MacroQuest /cast](https://docs.macroquest.org/reference/commands/cast/), [MQ2Cast /interrupt](https://docs.macroquest.org/plugins/community-plugins/mq2cast/); `/sit` and `/stand` are EverQuest built in |
+| `/mqtarget id <id>`, `/mqtarget npc <name>` | spells, abilities, travel | [MacroQuest /mqtarget](https://docs.macroquest.org/reference/commands/mqtarget/) |
 | `/face fast id <id>` | abilities | [MacroQuest /face](https://docs.macroquest.org/reference/commands/face/) |
 | `/doability "<name>"` | abilities, travel | [MacroQuest /doability](https://docs.macroquest.org/reference/commands/doability/) |
 | `/destroy`, `/autoinventory` | spells | [MacroQuest /destroy](https://docs.macroquest.org/reference/commands/destroy/); `/autoinventory` is built in |
@@ -115,7 +115,7 @@ Every command goes through `utils.cmd`. Nothing outside this list is sent.
 | `/face fast loc <y>,<x>` | travel (Safe Fall) | [/face](https://docs.macroquest.org/reference/commands/face/) |
 | `/travelto <zone>`, `/travelto stop` | travel | [MQ2EasyFind /travelto](https://www.redguides.com/docs/projects/mq2easyfind/cmd-travelto/) |
 | `/startforage`, `/stopforage` | abilities | [MQ2AutoForage docs](https://docs.macroquest.org/plugins/community-plugins/mq2autoforage/) |
-| `/rgl pause`, `/rgl unpause` | plugins | [RedGuides RGMercs thread](https://www.redguides.com/community/threads/anniversary-tower-missions-full-automation.92165/) |
+| `/rgl pause`, `/rgl unpause` | plugins | [RGMercs source, utils/binds.lua](https://github.com/DerpleDude/rgmercs/blob/c94847de7dda44123d5b5693049547541df75d87/utils/binds.lua#L567-L589) |
 
 TLO members and ImGui calls were checked against [mq-definitions](https://github.com/macroquest/mq-definitions). Zone short names: [RedGuides zone list](https://www.redguides.com/docs/projects/everquest/general/zone-short-names/). Inventory slot names: [MacroQuest slot names](https://docs.macroquest.org/reference/general/slot-names/). Specialization rules: [EverQuest Fandom](https://everquest.fandom.com/wiki/Spell_school_specialization_skills), [Allakhazam Secondary Forte](https://everquest.allakhazam.com/wiki/eq:Secondary_Forte), [EverQuest 2022 update notes](https://www.everquest.com/update-notes/eq-update-notes-4-20-2022).
 
